@@ -128,4 +128,3 @@ def test_civo_network_firewall_graph(
     assert check_rels(
         neo4j_session, "CivoFirewall", "id", "CivoNetwork", "id", "PART_OF_NETWORK"
     ) == {(TEST_FIREWALL_ID, TEST_NETWORK_ID)}
-
