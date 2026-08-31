@@ -85,7 +85,7 @@ def get_subnets(
 ) -> list[dict[str, Any]]:
     all_subnets: list[dict[str, Any]] = []
     for network, region_code in networks_by_region:
-        network_id = network["id"]
+        network_id = require_non_empty(network.get("id"), "network id")
         subnets = get_json_array(
             api_session,
             f"{base_url}/v2/networks/{network_id}/subnets",

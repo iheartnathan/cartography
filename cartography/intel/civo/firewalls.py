@@ -85,7 +85,7 @@ def get_rules(
 ) -> list[dict[str, Any]]:
     all_rules: list[dict[str, Any]] = []
     for firewall, region_code in firewalls_by_region:
-        firewall_id = firewall["id"]
+        firewall_id = require_non_empty(firewall.get("id"), "firewall id")
         rules = get_json_array(
             api_session,
             f"{base_url}/v2/firewalls/{firewall_id}/rules",
