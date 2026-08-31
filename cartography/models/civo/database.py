@@ -84,10 +84,10 @@ class CivoDatabaseSchema(CartographyNodeSchema):
     `network_id`/`firewall_id` are kept as plain properties only in this PR -
     not wired as `PART_OF_NETWORK`/`PROTECTED_BY` relationships, since
     `CivoNetwork`/`CivoFirewall` are owned by the separate Networking PR and
-    don't exist on this branch. Those edges are added in a follow-up
-    cross-resource-relationships PR once every Civo resource PR has merged
-    (see .claude-workstreams/civo-pr-split-plan.md) - a relationship must not
-    target a node schema that doesn't exist yet on this PR's own branch."""
+    don't exist on this branch. Those edges are added by the
+    add-civo-cross-resource-relationships PR, opened once every Civo
+    resource PR has merged - a relationship must not target a node schema
+    that doesn't exist yet on this PR's own branch."""
 
     label: str = "CivoDatabase"
     properties: CivoDatabaseNodeProperties = CivoDatabaseNodeProperties()
