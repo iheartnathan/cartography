@@ -90,9 +90,26 @@ netlify_mapping = OntologyMapping(
     ],
 )
 
+civo_mapping = OntologyMapping(
+    module_name="civo",
+    nodes=[
+        OntologyNodeMapping(
+            node_label="CivoDNSDomain",
+            fields=[
+                OntologyFieldMapping(
+                    ontology_field="name", node_field="name", required=True
+                ),
+                # public: Civo DNS domains are always public - no private-zone
+                # concept, unlike AWS Route53.
+            ],
+        ),
+    ],
+)
+
 DNSZONES_ONTOLOGY_MAPPING: dict[str, OntologyMapping] = {
     "aws": aws_mapping,
     "gcp": gcp_mapping,
     "cloudflare": cloudflare_mapping,
     "netlify": netlify_mapping,
+    "civo": civo_mapping,
 }

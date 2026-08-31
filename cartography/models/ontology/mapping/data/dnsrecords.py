@@ -129,6 +129,22 @@ netlify_mapping = OntologyMapping(
     ],
 )
 
+civo_mapping = OntologyMapping(
+    module_name="civo",
+    nodes=[
+        OntologyNodeMapping(
+            node_label="CivoDNSRecord",
+            fields=[
+                OntologyFieldMapping(
+                    ontology_field="name", node_field="name", required=True
+                ),
+                OntologyFieldMapping(ontology_field="type", node_field="type"),
+                OntologyFieldMapping(ontology_field="value", node_field="value"),
+            ],
+        ),
+    ],
+)
+
 DNSRECORDS_ONTOLOGY_MAPPING: dict[str, OntologyMapping] = {
     "aws": aws_mapping,
     "gcp": gcp_mapping,
@@ -137,4 +153,5 @@ DNSRECORDS_ONTOLOGY_MAPPING: dict[str, OntologyMapping] = {
     "bbot": bbot_mapping,
     "supabase": supabase_mapping,
     "netlify": netlify_mapping,
+    "civo": civo_mapping,
 }
