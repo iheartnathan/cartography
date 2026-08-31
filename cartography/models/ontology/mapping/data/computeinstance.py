@@ -341,11 +341,58 @@ netlify_mapping = OntologyMapping(
     ],
 )
 
+
+# Civo Instance.status. Only BUILDING and ACTIVE are documented; other values
+# (e.g. a stopped/shutoff state) exist per the stop/start API but are not
+# enumerated anywhere in Civo's docs or their civogo SDK, so they are left
+# unmapped rather than guessed.
+_CIVO_INSTANCE_STATE = {
+    "BUILDING": "pending",
+    "ACTIVE": "running",
+}
+
+# NOTE: cartography.models.ontology.mapping.data.computeinstance is a shared
+# registry file also touched by the separate Civo Kubernetes PR, which adds
+# a CivoKubernetesInstance OntologyNodeMapping to this same civo_mapping
+# object. Expect a small conflict here when both PRs are merged - see the PR
+# split plan's Shared-File Conflict Management section.
+civo_mapping = OntologyMapping(
+    module_name="civo",
+    nodes=[
+        OntologyNodeMapping(
+            node_label="CivoInstance",
+            fields=[
+                OntologyFieldMapping(
+                    ontology_field="name", node_field="hostname", required=True
+                ),
+                OntologyFieldMapping(ontology_field="region", node_field="region"),
+                OntologyFieldMapping(
+                    ontology_field="private_ip_address", node_field="private_ip"
+                ),
+                OntologyFieldMapping(
+                    ontology_field="public_ip_address", node_field="public_ip"
+                ),
+                OntologyFieldMapping(
+                    ontology_field="state",
+                    node_field="status",
+                    special_handling="mapping",
+                    extra={"map": _CIVO_INSTANCE_STATE},
+                ),
+                OntologyFieldMapping(ontology_field="type", node_field="size"),
+                OntologyFieldMapping(
+                    ontology_field="created_at", node_field="created_at"
+                ),
+            ],
+        ),
+    ],
+)
+
 COMPUTE_INSTANCE_ONTOLOGY_MAPPING: dict[str, OntologyMapping] = {
     "aws": aws_mapping,
     "scaleway": scaleway_mapping,
     "digitalocean": digitalocean_mapping,
     "gcp": gcp_mapping,
     "azure": azure_mapping,
+    "civo": civo_mapping,
     "netlify": netlify_mapping,
 }
