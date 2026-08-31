@@ -351,11 +351,9 @@ _CIVO_INSTANCE_STATE = {
     "ACTIVE": "running",
 }
 
-# NOTE: cartography.models.ontology.mapping.data.computeinstance is a shared
-# registry file also touched by the separate Civo Kubernetes PR, which adds
-# a CivoKubernetesInstance OntologyNodeMapping to this same civo_mapping
-# object. Expect a small conflict here when both PRs are merged - see the PR
-# split plan's Shared-File Conflict Management section.
+# NOTE: the stacked Civo Kubernetes PR extends this same civo_mapping with
+# CivoKubernetesWorkerNode. Because that branch is based on this compute PR,
+# the mapping grows linearly rather than through sibling-branch conflicts.
 civo_mapping = OntologyMapping(
     module_name="civo",
     nodes=[
