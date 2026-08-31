@@ -8,6 +8,7 @@ from cartography.models.core.relationships import CartographyRelProperties
 from cartography.models.core.relationships import CartographyRelSchema
 from cartography.models.core.relationships import LinkDirection
 from cartography.models.core.relationships import make_target_node_matcher
+from cartography.models.core.relationships import OtherRelationships
 from cartography.models.core.relationships import TargetNodeMatcher
 from cartography.models.ontology.labels import BLOCK_STORAGE
 
@@ -73,20 +74,78 @@ class CivoVolumeToAccountRel(CartographyRelSchema):
 
 
 @dataclass(frozen=True)
+class CivoVolumeToInstanceRelProperties(CartographyRelProperties):
+    lastupdated: PropertyRef = PropertyRef("lastupdated", set_in_kwargs=True)
+
+
+@dataclass(frozen=True)
+# (:CivoVolume)-[:ATTACHED_TO]->(:CivoInstance)
+class CivoVolumeToInstanceRel(CartographyRelSchema):
+    """Connects `CivoVolume` to the `CivoInstance` it's attached to."""
+
+    target_node_label: str = "CivoInstance"
+    target_node_matcher: TargetNodeMatcher = make_target_node_matcher(
+        {"id": PropertyRef("instance_id")},
+    )
+    direction: LinkDirection = LinkDirection.OUTWARD
+    rel_label: str = "ATTACHED_TO"
+    properties: CivoVolumeToInstanceRelProperties = CivoVolumeToInstanceRelProperties()
+
+
+@dataclass(frozen=True)
+class CivoVolumeToClusterRelProperties(CartographyRelProperties):
+    lastupdated: PropertyRef = PropertyRef("lastupdated", set_in_kwargs=True)
+
+
+@dataclass(frozen=True)
+# (:CivoVolume)-[:PART_OF_CLUSTER]->(:CivoKubernetesCluster)
+class CivoVolumeToClusterRel(CartographyRelSchema):
+    """Connects `CivoVolume` to the `CivoKubernetesCluster` it belongs to, if any."""
+
+    target_node_label: str = "CivoKubernetesCluster"
+    target_node_matcher: TargetNodeMatcher = make_target_node_matcher(
+        {"id": PropertyRef("cluster_id")},
+    )
+    direction: LinkDirection = LinkDirection.OUTWARD
+    rel_label: str = "PART_OF_CLUSTER"
+    properties: CivoVolumeToClusterRelProperties = CivoVolumeToClusterRelProperties()
+
+
+@dataclass(frozen=True)
+class CivoVolumeToNetworkRelProperties(CartographyRelProperties):
+    lastupdated: PropertyRef = PropertyRef("lastupdated", set_in_kwargs=True)
+
+
+@dataclass(frozen=True)
+# (:CivoVolume)-[:PART_OF_NETWORK]->(:CivoNetwork)
+class CivoVolumeToNetworkRel(CartographyRelSchema):
+    """Connects `CivoVolume` to the `CivoNetwork` it's on."""
+
+    target_node_label: str = "CivoNetwork"
+    target_node_matcher: TargetNodeMatcher = make_target_node_matcher(
+        {"id": PropertyRef("network_id")},
+    )
+    direction: LinkDirection = LinkDirection.OUTWARD
+    rel_label: str = "PART_OF_NETWORK"
+    properties: CivoVolumeToNetworkRelProperties = CivoVolumeToNetworkRelProperties()
+
+
+@dataclass(frozen=True)
 class CivoVolumeSchema(CartographyNodeSchema):
     """A Civo block storage volume.
 
-    `instance_id`/`cluster_id`/`network_id` are kept as plain properties
-    only in this PR - not wired as `ATTACHED_TO`/`PART_OF_CLUSTER`/
-    `PART_OF_NETWORK` relationships, since `CivoInstance`/
-    `CivoKubernetesCluster`/`CivoNetwork` are owned by the separate
-    Compute/Kubernetes/Networking PRs and don't exist on this branch.
-    Those edges are added by the add-civo-cross-resource-relationships
-    PR, opened once every Civo resource PR has merged - a relationship
-    must not target a node schema that doesn't exist yet on this PR's
-    own branch."""
+    `ATTACHED_TO`, `PART_OF_CLUSTER`, and `PART_OF_NETWORK` link the volume
+    to its instance, Kubernetes cluster, and network when those referenced
+    resources are present in the graph."""
 
     label: str = "CivoVolume"
     properties: CivoVolumeNodeProperties = CivoVolumeNodeProperties()
     extra_node_labels: ExtraNodeLabels = ExtraNodeLabels([BLOCK_STORAGE])
     sub_resource_relationship: CivoVolumeToAccountRel = CivoVolumeToAccountRel()
+    other_relationships: OtherRelationships = OtherRelationships(
+        [
+            CivoVolumeToInstanceRel(),
+            CivoVolumeToClusterRel(),
+            CivoVolumeToNetworkRel(),
+        ],
+    )
