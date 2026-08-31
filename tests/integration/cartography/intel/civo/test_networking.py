@@ -2,9 +2,12 @@ from unittest.mock import patch
 
 import requests
 
+import cartography.intel.civo
 import cartography.intel.civo.account
 import cartography.intel.civo.firewalls
 import cartography.intel.civo.networks
+import cartography.intel.civo.sshkeys
+from cartography.config import Config
 from tests.data.civo.account import QUOTA_RESPONSE
 from tests.data.civo.firewalls import FIREWALL_RULES_RESPONSE
 from tests.data.civo.firewalls import FIREWALLS_RESPONSE
@@ -126,3 +129,104 @@ def test_civo_network_firewall_graph(
     assert check_rels(
         neo4j_session, "CivoFirewall", "id", "CivoNetwork", "id", "PART_OF_NETWORK"
     ) == {(TEST_FIREWALL_ID, TEST_NETWORK_ID)}
+
+
+@patch.object(
+    cartography.intel.civo,
+    "get_regions",
+    return_value=[
+        {
+            "code": TEST_REGION_CODE,
+            "features": {
+                "iaas": True,
+                "kubernetes": True,
+                "object_store": True,
+                "loadbalancer": True,
+                "gpu": True,
+                "dbaas": True,
+                "volume": True,
+                "paas": True,
+                "public_ip_node_pools": True,
+            },
+        },
+    ],
+)
+@patch.object(
+    cartography.intel.civo.firewalls,
+    "get_rules",
+    return_value=cartography.intel.civo.firewalls.transform_rules(
+        FIREWALL_RULES_RESPONSE, TEST_FIREWALL_ID
+    ),
+)
+@patch.object(
+    cartography.intel.civo.firewalls,
+    "get",
+    return_value=FIREWALLS_BY_REGION,
+)
+@patch.object(
+    cartography.intel.civo.networks,
+    "get_subnets",
+    return_value=cartography.intel.civo.networks.transform_subnets(
+        SUBNETS_RESPONSE, TEST_NETWORK_ID
+    ),
+)
+@patch.object(
+    cartography.intel.civo.networks,
+    "get",
+    return_value=NETWORKS_BY_REGION,
+)
+@patch.object(
+    cartography.intel.civo.sshkeys,
+    "get",
+    return_value=[],
+)
+@patch.object(
+    cartography.intel.civo.account,
+    "get",
+    return_value=QUOTA_RESPONSE,
+)
+def test_start_civo_ingestion_wires_networking_resources(
+    mock_account_get,
+    mock_sshkeys_get,
+    mock_networks_get,
+    mock_subnets_get,
+    mock_firewalls_get,
+    mock_rules_get,
+    mock_get_regions,
+    neo4j_session,
+):
+    """
+    Exercises the real entrypoint end-to-end for this PR's own resources,
+    unlike the tests above which call each module's sync()/cleanup()
+    directly. Catches wiring bugs a per-domain test can't: a missing
+    entrypoint import, a forgotten sync() call, or a merge-conflict
+    resolution that silently drops this PR's resources from __init__.py.
+    """
+    # Arrange
+    config = Config(
+        neo4j_uri="bolt://fake-neo4j:7687",
+        update_tag=TEST_UPDATE_TAG,
+        civo_api_key="fake-key",
+        civo_base_url=TEST_BASE_URL,
+    )
+
+    # Act
+    cartography.intel.civo.start_civo_ingestion(neo4j_session, config)
+
+    # Assert: this PR's resources both loaded and linked to their account,
+    # proving the entrypoint actually wires this PR's sync() calls.
+    assert check_nodes(neo4j_session, "CivoNetwork", ["id"]) == {(TEST_NETWORK_ID,)}
+    assert check_nodes(neo4j_session, "CivoFirewall", ["id"]) == {(TEST_FIREWALL_ID,)}
+    assert check_rels(
+        neo4j_session, "CivoAccount", "id", "CivoNetwork", "id", "RESOURCE"
+    ) == {(TEST_ACCOUNT_ID, TEST_NETWORK_ID)}
+
+    # Cleanup: this test's nodes would otherwise persist in the shared
+    # module-scoped test database and pollute other tests' exact-set
+    # assertions.
+    neo4j_session.run(
+        "MATCH (n:CivoAccount) WHERE n.id = $id DETACH DELETE n", id=TEST_ACCOUNT_ID
+    )
+    neo4j_session.run(
+        "MATCH (n) WHERE n:CivoNetwork OR n:CivoSubnet OR n:CivoFirewall OR n:CivoFirewallRule DETACH DELETE n"
+    )

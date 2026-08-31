@@ -10,6 +10,7 @@ import cartography.intel.civo.firewalls
 import cartography.intel.civo.networks
 import cartography.intel.civo.sshkeys
 from cartography.config import Config
+from cartography.intel.civo.util import get_regions
 from cartography.util import timeit
 
 logger = logging.getLogger(__name__)
@@ -72,6 +73,13 @@ def start_civo_ingestion(neo4j_session: neo4j.Session, config: Config) -> None:
         api_session,
         common_job_parameters,
     )
+    # CivoNetwork/CivoFirewall are region-scoped; populate REGIONS if a
+    # prior resource PR hasn't already (guarded so it's fetched at most
+    # once regardless of merge order among regional PRs).
+    if "REGIONS" not in common_job_parameters:
+        common_job_parameters["REGIONS"] = get_regions(
+            api_session, common_job_parameters["BASE_URL"]
+        )
     cartography.intel.civo.networks.sync(
         neo4j_session,
         api_session,
