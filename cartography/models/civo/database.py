@@ -8,7 +8,6 @@ from cartography.models.core.relationships import CartographyRelProperties
 from cartography.models.core.relationships import CartographyRelSchema
 from cartography.models.core.relationships import LinkDirection
 from cartography.models.core.relationships import make_target_node_matcher
-from cartography.models.core.relationships import OtherRelationships
 from cartography.models.core.relationships import TargetNodeMatcher
 from cartography.models.ontology.labels import DATABASE
 
@@ -78,56 +77,19 @@ class CivoDatabaseToAccountRel(CartographyRelSchema):
 
 
 @dataclass(frozen=True)
-class CivoDatabaseToFirewallRelProperties(CartographyRelProperties):
-    lastupdated: PropertyRef = PropertyRef("lastupdated", set_in_kwargs=True)
-
-
-@dataclass(frozen=True)
-# (:CivoDatabase)-[:PROTECTED_BY]->(:CivoFirewall)
-class CivoDatabaseToFirewallRel(CartographyRelSchema):
-    """Connects `CivoDatabase` to the `CivoFirewall` protecting it."""
-
-    target_node_label: str = "CivoFirewall"
-    target_node_matcher: TargetNodeMatcher = make_target_node_matcher(
-        {"id": PropertyRef("firewall_id")},
-    )
-    direction: LinkDirection = LinkDirection.OUTWARD
-    rel_label: str = "PROTECTED_BY"
-    properties: CivoDatabaseToFirewallRelProperties = (
-        CivoDatabaseToFirewallRelProperties()
-    )
-
-
-@dataclass(frozen=True)
-class CivoDatabaseToNetworkRelProperties(CartographyRelProperties):
-    lastupdated: PropertyRef = PropertyRef("lastupdated", set_in_kwargs=True)
-
-
-@dataclass(frozen=True)
-# (:CivoDatabase)-[:PART_OF_NETWORK]->(:CivoNetwork)
-class CivoDatabaseToNetworkRel(CartographyRelSchema):
-    """Connects `CivoDatabase` to the `CivoNetwork` it's on."""
-
-    target_node_label: str = "CivoNetwork"
-    target_node_matcher: TargetNodeMatcher = make_target_node_matcher(
-        {"id": PropertyRef("network_id")},
-    )
-    direction: LinkDirection = LinkDirection.OUTWARD
-    rel_label: str = "PART_OF_NETWORK"
-    properties: CivoDatabaseToNetworkRelProperties = (
-        CivoDatabaseToNetworkRelProperties()
-    )
-
-
-@dataclass(frozen=True)
 class CivoDatabaseSchema(CartographyNodeSchema):
     """A Civo managed database. Excludes `password` and
-    `database_user_info[].password` - real credentials returned by the API."""
+    `database_user_info[].password` - real credentials returned by the API.
+
+    `network_id`/`firewall_id` are kept as plain properties only in this PR -
+    not wired as `PART_OF_NETWORK`/`PROTECTED_BY` relationships, since
+    `CivoNetwork`/`CivoFirewall` are owned by the separate Networking PR and
+    don't exist on this branch. Those edges are added in a follow-up
+    cross-resource-relationships PR once every Civo resource PR has merged
+    (see .claude-workstreams/civo-pr-split-plan.md) - a relationship must not
+    target a node schema that doesn't exist yet on this PR's own branch."""
 
     label: str = "CivoDatabase"
     properties: CivoDatabaseNodeProperties = CivoDatabaseNodeProperties()
     extra_node_labels: ExtraNodeLabels = ExtraNodeLabels([DATABASE])
     sub_resource_relationship: CivoDatabaseToAccountRel = CivoDatabaseToAccountRel()
-    other_relationships: OtherRelationships = OtherRelationships(
-        [CivoDatabaseToFirewallRel(), CivoDatabaseToNetworkRel()],
-    )
