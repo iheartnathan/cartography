@@ -103,17 +103,54 @@ class CivoKubernetesClusterToAccountRel(CartographyRelSchema):
 
 
 @dataclass(frozen=True)
+class CivoKubernetesClusterToNetworkRelProperties(CartographyRelProperties):
+    lastupdated: PropertyRef = PropertyRef("lastupdated", set_in_kwargs=True)
+
+
+@dataclass(frozen=True)
+# (:CivoKubernetesCluster)-[:PART_OF_NETWORK]->(:CivoNetwork)
+class CivoKubernetesClusterToNetworkRel(CartographyRelSchema):
+    """Connects `CivoKubernetesCluster` to the `CivoNetwork` it's on."""
+
+    target_node_label: str = "CivoNetwork"
+    target_node_matcher: TargetNodeMatcher = make_target_node_matcher(
+        {"id": PropertyRef("network_id")},
+    )
+    direction: LinkDirection = LinkDirection.OUTWARD
+    rel_label: str = "PART_OF_NETWORK"
+    properties: CivoKubernetesClusterToNetworkRelProperties = (
+        CivoKubernetesClusterToNetworkRelProperties()
+    )
+
+
+@dataclass(frozen=True)
+class CivoKubernetesClusterToFirewallRelProperties(CartographyRelProperties):
+    lastupdated: PropertyRef = PropertyRef("lastupdated", set_in_kwargs=True)
+
+
+@dataclass(frozen=True)
+# (:CivoKubernetesCluster)-[:PROTECTED_BY]->(:CivoFirewall)
+class CivoKubernetesClusterToFirewallRel(CartographyRelSchema):
+    """Connects `CivoKubernetesCluster` to the `CivoFirewall` protecting it."""
+
+    target_node_label: str = "CivoFirewall"
+    target_node_matcher: TargetNodeMatcher = make_target_node_matcher(
+        {"id": PropertyRef("firewall_id")},
+    )
+    direction: LinkDirection = LinkDirection.OUTWARD
+    rel_label: str = "PROTECTED_BY"
+    properties: CivoKubernetesClusterToFirewallRelProperties = (
+        CivoKubernetesClusterToFirewallRelProperties()
+    )
+
+
+@dataclass(frozen=True)
 class CivoKubernetesClusterSchema(CartographyNodeSchema):
     """A Civo managed Kubernetes cluster. Excludes `kubeconfig`, a real
     credential that grants full cluster access.
 
-    `network_id`/`firewall_id` are kept as plain properties only in this PR -
-    not wired as `PART_OF_NETWORK`/`PROTECTED_BY` relationships, since
-    `CivoNetwork`/`CivoFirewall` are owned by the separate Networking PR and
-    don't exist on this branch. Those edges are added by the
-    add-civo-cross-resource-relationships PR, opened once every Civo
-    resource PR has merged - a relationship must not target a node schema
-    that doesn't exist yet on this PR's own branch."""
+    `PART_OF_NETWORK` and `PROTECTED_BY` link the cluster to its network
+    and firewall when the referenced resources are present in the graph."""
 
     label: str = "CivoKubernetesCluster"
     properties: CivoKubernetesClusterNodeProperties = (
@@ -122,6 +159,9 @@ class CivoKubernetesClusterSchema(CartographyNodeSchema):
     extra_node_labels: ExtraNodeLabels = ExtraNodeLabels([COMPUTE_CLUSTER])
     sub_resource_relationship: CivoKubernetesClusterToAccountRel = (
         CivoKubernetesClusterToAccountRel()
+    )
+    other_relationships: OtherRelationships = OtherRelationships(
+        [CivoKubernetesClusterToNetworkRel(), CivoKubernetesClusterToFirewallRel()],
     )
 
 
@@ -301,19 +341,56 @@ class CivoKubernetesInstanceToPoolRel(CartographyRelSchema):
 
 
 @dataclass(frozen=True)
+class CivoKubernetesInstanceToNetworkRelProperties(CartographyRelProperties):
+    lastupdated: PropertyRef = PropertyRef("lastupdated", set_in_kwargs=True)
+
+
+@dataclass(frozen=True)
+# (:CivoKubernetesInstance)-[:PART_OF_NETWORK]->(:CivoNetwork)
+class CivoKubernetesInstanceToNetworkRel(CartographyRelSchema):
+    """Connects `CivoKubernetesInstance` to the `CivoNetwork` it's on."""
+
+    target_node_label: str = "CivoNetwork"
+    target_node_matcher: TargetNodeMatcher = make_target_node_matcher(
+        {"id": PropertyRef("network_id")},
+    )
+    direction: LinkDirection = LinkDirection.OUTWARD
+    rel_label: str = "PART_OF_NETWORK"
+    properties: CivoKubernetesInstanceToNetworkRelProperties = (
+        CivoKubernetesInstanceToNetworkRelProperties()
+    )
+
+
+@dataclass(frozen=True)
+class CivoKubernetesInstanceToFirewallRelProperties(CartographyRelProperties):
+    lastupdated: PropertyRef = PropertyRef("lastupdated", set_in_kwargs=True)
+
+
+@dataclass(frozen=True)
+# (:CivoKubernetesInstance)-[:PROTECTED_BY]->(:CivoFirewall)
+class CivoKubernetesInstanceToFirewallRel(CartographyRelSchema):
+    """Connects `CivoKubernetesInstance` to the `CivoFirewall` protecting it."""
+
+    target_node_label: str = "CivoFirewall"
+    target_node_matcher: TargetNodeMatcher = make_target_node_matcher(
+        {"id": PropertyRef("firewall_id")},
+    )
+    direction: LinkDirection = LinkDirection.OUTWARD
+    rel_label: str = "PROTECTED_BY"
+    properties: CivoKubernetesInstanceToFirewallRelProperties = (
+        CivoKubernetesInstanceToFirewallRelProperties()
+    )
+
+
+@dataclass(frozen=True)
 class CivoKubernetesInstanceSchema(CartographyNodeSchema):
     """A worker node (compute instance) within a `CivoKubernetesPool`. Excludes
     several fields returned by the API that are real credentials: `initial_password`,
     `civostatsd_token` (both real credentials), `ssh_key` (a placeholder on
     k3s nodes today, but not one to trust as safe), and `script`.
 
-    `network_id`/`firewall_id` are kept as plain properties only in this PR -
-    not wired as `PART_OF_NETWORK`/`PROTECTED_BY` relationships, since
-    `CivoNetwork`/`CivoFirewall` are owned by the separate Networking PR and
-    don't exist on this branch. Those edges are added by the
-    add-civo-cross-resource-relationships PR, opened once every Civo
-    resource PR has merged - a relationship must not target a node schema
-    that doesn't exist yet on this PR's own branch."""
+    `PART_OF_NETWORK` and `PROTECTED_BY` link the worker node to its network
+    and firewall when the referenced resources are present in the graph."""
 
     label: str = "CivoKubernetesInstance"
     properties: CivoKubernetesInstanceNodeProperties = (
@@ -326,5 +403,7 @@ class CivoKubernetesInstanceSchema(CartographyNodeSchema):
     other_relationships: OtherRelationships = OtherRelationships(
         [
             CivoKubernetesInstanceToPoolRel(),
+            CivoKubernetesInstanceToNetworkRel(),
+            CivoKubernetesInstanceToFirewallRel(),
         ],
     )
