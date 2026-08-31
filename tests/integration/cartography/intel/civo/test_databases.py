@@ -54,12 +54,9 @@ def test_civo_database_no_password_reaches_graph(
     mock_account_get, mock_databases_get, neo4j_session
 ):
     """
-    CivoDatabase loaded standalone. network_id/firewall_id are kept as
-    plain properties only in this PR, not wired as PART_OF_NETWORK/
-    PROTECTED_BY relationships - CivoNetwork/CivoFirewall are owned by
-    the separate Networking PR and don't exist on this branch. Those
-    edges are added in a follow-up cross-resource-relationships PR once
-    every Civo resource PR has merged (see the PR split plan).
+    Sync only CivoDatabase and verify its properties and password exclusions.
+    Cross-domain relationship resolution is covered by the final relationship
+    layer with matching target nodes loaded.
     """
     # Arrange
     api_session = requests.Session()
