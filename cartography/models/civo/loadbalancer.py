@@ -87,9 +87,8 @@ class CivoLoadBalancerSchema(CartographyNodeSchema):
     `PART_OF_NETWORK` relationships, since `CivoFirewall`/
     `CivoKubernetesCluster`/`CivoNetwork` are owned by the separate
     Networking/Kubernetes PRs and don't exist on this branch. Those edges
-    are added in a follow-up cross-resource-relationships PR once every
-    Civo resource PR has merged (see
-    .claude-workstreams/civo-pr-split-plan.md) - a relationship must not
+    are added by the add-civo-cross-resource-relationships PR, opened
+    once every Civo resource PR has merged - a relationship must not
     target a node schema that doesn't exist yet on this PR's own
     branch."""
 
@@ -192,9 +191,9 @@ class CivoLoadBalancerBackendSchema(CartographyNodeSchema):
     Matched by private IP scoped to the same network and account, `ROUTES_TO`
     a `CivoInstance` in the reference combined implementation - not wired
     here, since `CivoInstance` is owned by the separate Compute PR and
-    doesn't exist on this branch. That edge is added in a follow-up
-    cross-resource-relationships PR once every Civo resource PR has merged
-    (see .claude-workstreams/civo-pr-split-plan.md)."""
+    doesn't exist on this branch. That edge is added by the
+    add-civo-cross-resource-relationships PR, opened once every Civo
+    resource PR has merged."""
 
     label: str = "CivoLoadBalancerBackend"
     properties: CivoLoadBalancerBackendNodeProperties = (

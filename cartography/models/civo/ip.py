@@ -54,9 +54,9 @@ class CivoIPToLoadBalancerRel(CartographyRelSchema):
     `assigned_to_type` is `loadbalancer`. Civo's `assigned_to` is also
     polymorphic to `instance` - not wired as a `CivoInstance` relationship
     here, since `CivoInstance` is owned by the separate Compute PR and
-    doesn't exist on this branch. That edge is added in a follow-up
-    cross-resource-relationships PR once every Civo resource PR has merged
-    (see .claude-workstreams/civo-pr-split-plan.md)."""
+    doesn't exist on this branch. That edge is added by the
+    add-civo-cross-resource-relationships PR, opened once every Civo
+    resource PR has merged."""
 
     target_node_label: str = "CivoLoadBalancer"
     target_node_matcher: TargetNodeMatcher = make_target_node_matcher(
