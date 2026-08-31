@@ -8,6 +8,7 @@ from cartography.util import timeit
 logger = logging.getLogger(__name__)
 
 _TIMEOUT = (60, 60)
+_MAX_PAGINATION_PAGES = 100
 
 # The feature keys this module actually filters regions by (via
 # region_codes_for_feature - see instances.py/kubernetes.py/volumes.py/
@@ -54,6 +55,12 @@ def list_all_pages(
     treated as an authoritative empty (or corrupted) inventory, and a
     subsequent cleanup would delete every previously-ingested resource of
     that type as if it had vanished upstream.
+
+    Also raises if Civo reports more than ``_MAX_PAGINATION_PAGES`` pages.
+    This mirrors the official civogo SDK's 100-page safety cap and prevents a
+    malformed page count from causing an effectively unbounded request loop.
+    Failing instead of truncating is required because cleanup must never run
+    against a partial inventory.
     """
     all_items: list[dict[str, Any]] = []
     base_params: dict[str, Any] = dict(params or {})
@@ -74,9 +81,16 @@ def list_all_pages(
                 "empty) inventory, and cleanup() would delete every "
                 "previously-ingested resource of this type.",
             )
+        total_pages = data["pages"]
+        if total_pages > _MAX_PAGINATION_PAGES:
+            raise RuntimeError(
+                f"Civo GET {url} reports {total_pages} pages; maximum is "
+                f"{_MAX_PAGINATION_PAGES}. Refusing to return a partial "
+                "inventory.",
+            )
+
         all_items.extend(items)
 
-        total_pages = data["pages"]
         if page >= total_pages:
             break
         page += 1

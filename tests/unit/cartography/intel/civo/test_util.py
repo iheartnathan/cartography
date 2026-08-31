@@ -40,6 +40,25 @@ def test_list_all_pages_walks_every_page() -> None:
     assert session.get.call_args_list[1].kwargs["params"]["page"] == 2
 
 
+def test_list_all_pages_rejects_excessive_reported_page_count() -> None:
+    session = mock.MagicMock(spec=requests.Session)
+    session.get.side_effect = [
+        _make_response(
+            {
+                "page": 1,
+                "per_page": 20,
+                "pages": 101,
+                "items": [{"id": "first-item"}],
+            },
+        ),
+    ]
+
+    with pytest.raises(RuntimeError, match="reports 101 pages; maximum is 100"):
+        list_all_pages(session, "https://api.civo.com/v2/sshkeys")
+
+    assert session.get.call_count == 1
+
+
 def test_list_all_pages_stops_on_single_page() -> None:
     # Arrange: "pages": 1 means there is nothing more to fetch.
     session = mock.MagicMock(spec=requests.Session)
