@@ -89,7 +89,11 @@ def transform_stores(stores: list[dict[str, Any]]) -> list[dict[str, Any]]:
                 # REST docs show "max_size_gb" - a real discrepancy between
                 # the two sources that needs live-API verification. Reading
                 # both keys defensively is safe either way.
-                "max_size_gb": store.get("max_size_gb") or store.get("max_size"),
+                "max_size_gb": (
+                    store["max_size_gb"]
+                    if "max_size_gb" in store
+                    else store.get("max_size")
+                ),
                 "endpoint": store.get("objectstore_endpoint"),
                 "status": store.get("status"),
                 "owner_access_key_id": owner_info.get("access_key_id"),

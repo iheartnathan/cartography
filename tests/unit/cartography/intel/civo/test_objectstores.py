@@ -19,6 +19,21 @@ def test_transform_stores_flattens_owner_info_and_keeps_access_key_id() -> None:
     assert "owner_info" not in row
 
 
+def test_transform_stores_preserves_zero_max_size_gb() -> None:
+    # Arrange
+    store = {
+        **OBJECTSTORES_PAGE["items"][0],
+        "max_size_gb": 0,
+        "max_size": 500,
+    }
+
+    # Act
+    stores = cartography.intel.civo.objectstores.transform_stores([store])
+
+    # Assert
+    assert stores[0]["max_size_gb"] == 0
+
+
 def test_transform_credentials_drops_secret_access_key() -> None:
     # Act
     credentials = cartography.intel.civo.objectstores.transform_credentials(
