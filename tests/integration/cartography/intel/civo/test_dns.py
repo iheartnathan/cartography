@@ -75,8 +75,10 @@ def test_civo_dns_graph(
     cartography.intel.civo.dns.sync(neo4j_session, api_session, common_job_parameters)
 
     # Assert: CivoDNSDomain + CivoDNSRecord, correctly linked.
-    assert check_nodes(neo4j_session, "CivoDNSDomain", ["id", "name"]) == {
-        (TEST_DOMAIN_ID, "example.com"),
+    assert check_nodes(
+        neo4j_session, "CivoDNSDomain", ["id", "name", "_ont_public"]
+    ) == {
+        (TEST_DOMAIN_ID, "example.com", True),
     }
     assert check_nodes(
         neo4j_session, "CivoDNSRecord", ["id", "name", "type", "value"]

@@ -101,6 +101,12 @@ civo_mapping = OntologyMapping(
                 ),
                 # public: Civo DNS domains are always public - no private-zone
                 # concept, unlike AWS Route53.
+                OntologyFieldMapping(
+                    ontology_field="public",
+                    node_field="",
+                    special_handling="static_value",
+                    extra={"value": True},
+                ),
             ],
         ),
     ],
