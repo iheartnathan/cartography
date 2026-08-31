@@ -17,6 +17,7 @@ from tests.data.civo.instances import TEST_INSTANCE_ID
 from tests.data.civo.networks import NETWORKS_RESPONSE
 from tests.data.civo.networks import SUBNETS_RESPONSE
 from tests.data.civo.networks import TEST_NETWORK_ID
+from tests.data.civo.sshkeys import SSH_KEYS_RESPONSE
 from tests.integration.util import check_nodes
 from tests.integration.util import check_rels
 
@@ -51,6 +52,11 @@ def _common_job_parameters() -> dict:
     }
 
 
+@patch.object(
+    cartography.intel.civo.sshkeys,
+    "get",
+    return_value=SSH_KEYS_RESPONSE,
+)
 @patch.object(
     cartography.intel.civo.instances,
     "get",
@@ -94,6 +100,7 @@ def test_civo_instance_graph(
     mock_firewalls_get,
     mock_rules_get,
     mock_instances_get,
+    mock_sshkeys_get,
     neo4j_session,
 ):
     """
@@ -109,6 +116,11 @@ def test_civo_instance_graph(
         neo4j_session, api_session, common_job_parameters
     )
     common_job_parameters["ACCOUNT_ID"] = account["id"]
+    cartography.intel.civo.sshkeys.sync(
+        neo4j_session,
+        api_session,
+        common_job_parameters,
+    )
     cartography.intel.civo.networks.sync(
         neo4j_session,
         api_session,
@@ -171,3 +183,69 @@ def test_civo_instance_graph(
         "id",
         "PROTECTED_BY",
     ) == {(TEST_INSTANCE_ID, TEST_FIREWALL_ID)}
+    assert check_rels(
+        neo4j_session,
+        "CivoInstance",
+        "id",
+        "CivoSSHKey",
+        "id",
+        "HAS_SSH_KEY",
+    ) == {(TEST_INSTANCE_ID, INSTANCES_RESPONSE[0]["ssh_key_id"])}
+
+
+def test_civo_instance_cleanup_is_account_scoped(neo4j_session):
+    account_id = "compute-cleanup-account"
+    other_account_id = "compute-cleanup-other-account"
+    stale_instance_id = "compute-cleanup-stale-instance"
+    other_instance_id = "compute-cleanup-other-instance"
+
+    # Arrange: both accounts have an instance left by a previous complete
+    # sync. The second account deliberately remains on the old update tag.
+    cartography.intel.civo.account.load_accounts(
+        neo4j_session,
+        [{"id": account_id}, {"id": other_account_id}],
+        TEST_UPDATE_TAG,
+    )
+    cartography.intel.civo.instances.load_instances(
+        neo4j_session,
+        [{"id": stale_instance_id}],
+        account_id,
+        TEST_UPDATE_TAG,
+    )
+    cartography.intel.civo.instances.load_instances(
+        neo4j_session,
+        [{"id": other_instance_id}],
+        other_account_id,
+        TEST_UPDATE_TAG,
+    )
+
+    # Act: a later complete sync for only the first account no longer observes
+    # its instance, so its account-scoped cleanup should remove that node.
+    cartography.intel.civo.instances.cleanup(
+        neo4j_session,
+        {"ACCOUNT_ID": account_id, "UPDATE_TAG": TEST_UPDATE_TAG + 1},
+    )
+
+    # Assert: the active account's stale instance is gone; another account's
+    # equally stale instance is outside this cleanup scope and survives.
+    remaining_ids = {
+        record["id"]
+        for record in neo4j_session.run(
+            "MATCH (instance:CivoInstance) WHERE instance.id IN $ids "
+            "RETURN instance.id AS id",
+            ids=[stale_instance_id, other_instance_id],
+        )
+    }
+    assert stale_instance_id not in remaining_ids
+    assert other_instance_id in remaining_ids
+
+    # Avoid leaking the deliberately retained account and instance into other
+    # tests that share this integration database.
+    neo4j_session.run(
+        "MATCH (instance:CivoInstance {id: $id}) DETACH DELETE instance",
+        id=other_instance_id,
+    )
+    neo4j_session.run(
+        "MATCH (account:CivoAccount) WHERE account.id IN $ids DETACH DELETE account",
+        ids=[account_id, other_account_id],
+    )
