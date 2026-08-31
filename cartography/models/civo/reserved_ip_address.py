@@ -68,7 +68,9 @@ class CivoReservedIPAddressToInstanceRel(CartographyRelSchema):
     )
     direction: LinkDirection = LinkDirection.OUTWARD
     rel_label: str = "ASSIGNED_TO"
-    properties: CivoReservedIPAddressToInstanceRelProperties = CivoReservedIPAddressToInstanceRelProperties()
+    properties: CivoReservedIPAddressToInstanceRelProperties = (
+        CivoReservedIPAddressToInstanceRelProperties()
+    )
 
 
 @dataclass(frozen=True)
@@ -88,7 +90,9 @@ class CivoReservedIPAddressToLoadBalancerRel(CartographyRelSchema):
     )
     direction: LinkDirection = LinkDirection.OUTWARD
     rel_label: str = "ASSIGNED_TO"
-    properties: CivoReservedIPAddressToLoadBalancerRelProperties = CivoReservedIPAddressToLoadBalancerRelProperties()
+    properties: CivoReservedIPAddressToLoadBalancerRelProperties = (
+        CivoReservedIPAddressToLoadBalancerRelProperties()
+    )
 
 
 @dataclass(frozen=True)
@@ -107,7 +111,9 @@ class CivoReservedIPAddressToAccountRel(CartographyRelSchema):
     )
     direction: LinkDirection = LinkDirection.INWARD
     rel_label: str = "RESOURCE"
-    properties: CivoReservedIPAddressToAccountRelProperties = CivoReservedIPAddressToAccountRelProperties()
+    properties: CivoReservedIPAddressToAccountRelProperties = (
+        CivoReservedIPAddressToAccountRelProperties()
+    )
 
 
 @dataclass(frozen=True)
@@ -120,8 +126,15 @@ class CivoReservedIPAddressSchema(CartographyNodeSchema):
     display."""
 
     label: str = "CivoReservedIPAddress"
-    properties: CivoReservedIPAddressNodeProperties = CivoReservedIPAddressNodeProperties()
-    sub_resource_relationship: CivoReservedIPAddressToAccountRel = CivoReservedIPAddressToAccountRel()
+    properties: CivoReservedIPAddressNodeProperties = (
+        CivoReservedIPAddressNodeProperties()
+    )
+    sub_resource_relationship: CivoReservedIPAddressToAccountRel = (
+        CivoReservedIPAddressToAccountRel()
+    )
     other_relationships: OtherRelationships = OtherRelationships(
-        [CivoReservedIPAddressToInstanceRel(), CivoReservedIPAddressToLoadBalancerRel()],
+        [
+            CivoReservedIPAddressToInstanceRel(),
+            CivoReservedIPAddressToLoadBalancerRel(),
+        ],
     )
