@@ -1,3 +1,7 @@
+import importlib
+import pkgutil
+from contextlib import ExitStack
+from types import ModuleType
 from unittest.mock import patch
 
 import requests
@@ -157,38 +161,23 @@ def test_civo_sshkey_cleanup_removes_stale_keys(
     }
 
 
-@patch.object(
-    cartography.intel.civo.sshkeys,
-    "get",
-    return_value=SSH_KEYS_RESPONSE,
-)
-@patch.object(
-    cartography.intel.civo.account,
-    "get",
-    return_value=QUOTA_RESPONSE,
-)
-def test_start_civo_ingestion_wires_foundation_resources(
-    mock_account_get, mock_sshkeys_get, neo4j_session
-):
-    """
-    Foundation-only: exercises the real entrypoint end-to-end for this PR's
-    resources (config-gating and the account/ssh-key sync+cleanup wiring),
-    unlike the tests above which call each module's sync()/cleanup()
-    directly. Catches wiring bugs a per-domain test can't: a missing
-    entrypoint import, a forgotten sync() call, or a merge-conflict
-    resolution that silently drops a resource from __init__.py.
+def _discover_sync_modules() -> dict[str, ModuleType]:
+    modules = {}
+    for module_info in pkgutil.iter_modules(cartography.intel.civo.__path__):
+        module = importlib.import_module(
+            f"{cartography.intel.civo.__name__}.{module_info.name}",
+        )
+        if hasattr(module, "sync") and hasattr(module, "cleanup"):
+            modules[module_info.name] = module
+    return modules
 
-    ON THIS BRANCH ONLY - a Civo resource branch fanned out from
-    add-civo-intel-foundation must delete this test (not adapt it) the
-    moment it rebases this file in: __init__.py grows new sync() calls on
-    every such branch, and this test's only mocks are account.get/
-    sshkeys.get, so an unmocked sibling sync() call here makes a real HTTP
-    request and hangs on urllib3 retries (confirmed against
-    add-civo-networking). Each resource branch already has its own
-    equivalent test in its own file (e.g. test_networking.py's
-    test_start_civo_ingestion_wires_networking_resources) that mocks every
-    call its own __init__.py state actually makes - that test is the
-    correct, non-stale replacement for this one on that branch.
+
+def test_start_civo_ingestion_wires_every_available_module(neo4j_session):
+    """
+    Exercise the real entrypoint while adapting to every Civo module present
+    on the current stacked branch. Discovering modules from package files,
+    rather than from __init__.py's imports, catches both a missing import and
+    a missing sync/cleanup call without allowing any HTTP request.
     """
     # Arrange
     config = Config(
@@ -198,43 +187,42 @@ def test_start_civo_ingestion_wires_foundation_resources(
         civo_base_url=TEST_BASE_URL,
     )
 
-    # Act
-    cartography.intel.civo.start_civo_ingestion(neo4j_session, config)
+    modules = _discover_sync_modules()
+    assert {"account", "sshkeys"} <= set(modules)
 
-    # Assert: CivoAccount and CivoSSHKey - this PR's only resources - both
-    # loaded and linked, proving the entrypoint actually wires this PR's
-    # sync() calls, not just that sync() works when called directly.
-    assert check_nodes(neo4j_session, "CivoAccount", ["id"]) == {(TEST_ACCOUNT_ID,)}
-    assert check_nodes(neo4j_session, "CivoSSHKey", ["id"]) == {
-        (key["id"],) for key in SSH_KEYS_RESPONSE
-    }
-    assert check_rels(
-        neo4j_session,
-        "CivoSSHKey",
-        "id",
-        "CivoAccount",
-        "id",
-        "RESOURCE",
-        rel_direction_right=False,
-    ) == {(key["id"], TEST_ACCOUNT_ID) for key in SSH_KEYS_RESPONSE}
+    with ExitStack() as stack:
+        sync_mocks = {}
+        cleanup_mocks = {}
+        for name, module in modules.items():
+            return_value = QUOTA_RESPONSE if name == "account" else None
+            sync_mocks[name] = stack.enter_context(
+                patch.object(module, "sync", return_value=return_value),
+            )
+            cleanup_mocks[name] = stack.enter_context(patch.object(module, "cleanup"))
+        stack.enter_context(
+            patch.object(
+                cartography.intel.civo,
+                "get_regions",
+                return_value=[],
+                create=True,
+            ),
+        )
 
-    # Cleanup: this test's nodes would otherwise persist in the shared
-    # module-scoped test database and pollute later exact-set assertions.
-    neo4j_session.run(
-        "MATCH (n:CivoAccount) WHERE n.id = $id DETACH DELETE n", id=TEST_ACCOUNT_ID
-    )
-    neo4j_session.run(
-        "MATCH (n:CivoSSHKey) WHERE n.id IN $ids DETACH DELETE n",
-        ids=[key["id"] for key in SSH_KEYS_RESPONSE],
-    )
+        # Act
+        cartography.intel.civo.start_civo_ingestion(neo4j_session, config)
+
+    # Assert: every module file with the sync contract is wired into both
+    # entrypoint phases. Domain tests cover each implementation's graph output.
+    for module_mock in sync_mocks.values():
+        module_mock.assert_called_once()
+    for module_mock in cleanup_mocks.values():
+        module_mock.assert_called_once()
 
 
 def test_start_civo_ingestion_skips_when_unconfigured(neo4j_session):
     """
     Config-gating only: safe regardless of how much the entrypoint grows,
-    since `civo_api_key=None` returns before calling anything. Unlike
-    test_start_civo_ingestion_wires_foundation_resources above, this test
-    is safe to inherit unchanged on every downstream resource branch.
+    since `civo_api_key=None` returns before calling anything.
     """
     # Arrange: no civo_api_key - the entrypoint must skip entirely, not
     # raise or make any API call. Snapshot CivoAccount before acting, not
