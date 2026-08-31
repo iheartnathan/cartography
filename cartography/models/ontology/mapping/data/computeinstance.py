@@ -381,7 +381,7 @@ civo_mapping = OntologyMapping(
             ],
         ),
         OntologyNodeMapping(
-            node_label="CivoKubernetesInstance",
+            node_label="CivoKubernetesWorkerNode",
             fields=[
                 OntologyFieldMapping(
                     ontology_field="name", node_field="hostname", required=True

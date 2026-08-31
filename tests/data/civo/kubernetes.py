@@ -3,8 +3,8 @@ from typing import Any
 TEST_NETWORK_ID = "8d5c4e10-8b3a-4e6a-9b2e-1c2f3a4b5c6d"
 TEST_FIREWALL_ID = "f1e2d3c4-b5a6-4978-8899-001122334455"
 TEST_CLUSTER_ID = "c1c2c3c4-d5d6-e7e8-f9f0-a1a2a3a4a5a6"
-TEST_POOL_ID = "p1p2p3p4-q5q6-r7r8-s9s0-t1t2t3t4t5t6"
-TEST_WORKER_INSTANCE_ID = "w1w2w3w4-x5x6-y7y8-z9z0-a1b2c3d4e5f6"
+TEST_NODE_POOL_ID = "p1p2p3p4-q5q6-r7r8-s9s0-t1t2t3t4t5t6"
+TEST_WORKER_NODE_ID = "w1w2w3w4-x5x6-y7y8-z9z0-a1b2c3d4e5f6"
 
 KUBERNETES_CLUSTERS_PAGE: dict[str, Any] = {
     "page": 1,
@@ -37,7 +37,7 @@ KUBERNETES_CLUSTERS_PAGE: dict[str, Any] = {
             "created_at": "2026-01-10T08:00:00Z",
             "pools": [
                 {
-                    "id": TEST_POOL_ID,
+                    "id": TEST_NODE_POOL_ID,
                     "count": 3,
                     "size": "g4s.kube.medium",
                     "instance_names": [
@@ -47,7 +47,7 @@ KUBERNETES_CLUSTERS_PAGE: dict[str, Any] = {
                     "public_ip_node_pool": False,
                     "instances": [
                         {
-                            "id": TEST_WORKER_INSTANCE_ID,
+                            "id": TEST_WORKER_NODE_ID,
                             "hostname": "prod-cluster-pool-abc-1",
                             "size": "g4s.kube.medium",
                             "firewall_id": TEST_FIREWALL_ID,

@@ -3,8 +3,8 @@ import pytest
 import cartography.intel.civo.kubernetes
 from tests.data.civo.kubernetes import KUBERNETES_CLUSTERS_PAGE
 from tests.data.civo.kubernetes import TEST_CLUSTER_ID
-from tests.data.civo.kubernetes import TEST_POOL_ID
-from tests.data.civo.kubernetes import TEST_WORKER_INSTANCE_ID
+from tests.data.civo.kubernetes import TEST_NODE_POOL_ID
+from tests.data.civo.kubernetes import TEST_WORKER_NODE_ID
 
 
 def test_transform_clusters_drops_kubeconfig_and_flattens_installed_apps() -> None:
@@ -22,16 +22,16 @@ def test_transform_clusters_drops_kubeconfig_and_flattens_installed_apps() -> No
     assert row["version"] == "1.30.5-k3s1"
 
 
-def test_transform_pools_links_to_cluster() -> None:
+def test_transform_node_pools_links_to_cluster() -> None:
     # Act
-    pools = cartography.intel.civo.kubernetes.transform_pools(
+    node_pools = cartography.intel.civo.kubernetes.transform_node_pools(
         KUBERNETES_CLUSTERS_PAGE["items"]
     )
 
     # Assert
-    assert pools == [
+    assert node_pools == [
         {
-            "id": TEST_POOL_ID,
+            "id": TEST_NODE_POOL_ID,
             "cluster_id": TEST_CLUSTER_ID,
             "count": 3,
             "size": "g4s.kube.medium",
@@ -44,36 +44,36 @@ def test_transform_pools_links_to_cluster() -> None:
     ]
 
 
-def test_transform_kubernetes_instances_drops_secrets_and_links_to_pool() -> None:
+def test_transform_kubernetes_worker_nodes_drops_secrets_and_links_to_pool() -> None:
     # Act
-    instances = cartography.intel.civo.kubernetes.transform_instances(
+    worker_nodes = cartography.intel.civo.kubernetes.transform_worker_nodes(
         KUBERNETES_CLUSTERS_PAGE["items"]
     )
 
     # Assert: worker nodes are full compute instances (previously discarded
     # entirely - only instance_names, bare strings, were kept), with the
     # same secret fields CivoInstance already excludes dropped here too.
-    assert len(instances) == 1
-    row = instances[0]
-    assert row["id"] == TEST_WORKER_INSTANCE_ID
-    assert row["pool_id"] == TEST_POOL_ID
+    assert len(worker_nodes) == 1
+    row = worker_nodes[0]
+    assert row["id"] == TEST_WORKER_NODE_ID
+    assert row["pool_id"] == TEST_NODE_POOL_ID
     assert row["hostname"] == "prod-cluster-pool-abc-1"
     assert row["private_ip"] == "192.168.1.20"
     for secret_field in ("initial_password", "civostatsd_token", "ssh_key", "script"):
         assert secret_field not in row
 
 
-def test_transform_kubernetes_instances_inherits_cluster_region() -> None:
+def test_transform_kubernetes_worker_nodes_inherits_cluster_region() -> None:
     # Worker-node objects carry no region field of their own (confirmed
     # live) - it must be inherited from the parent cluster instead.
-    instances = cartography.intel.civo.kubernetes.transform_instances(
+    worker_nodes = cartography.intel.civo.kubernetes.transform_worker_nodes(
         KUBERNETES_CLUSTERS_PAGE["items"]
     )
 
-    assert instances[0]["region"] == "lon1"
+    assert worker_nodes[0]["region"] == "lon1"
 
 
-def test_transform_kubernetes_instances_rejects_empty_id() -> None:
+def test_transform_kubernetes_worker_nodes_rejects_empty_id() -> None:
     cluster = {
         **KUBERNETES_CLUSTERS_PAGE["items"][0],
         "pools": [
@@ -92,6 +92,6 @@ def test_transform_kubernetes_instances_rejects_empty_id() -> None:
     }
 
     with pytest.raises(
-        ValueError, match="missing required non-empty kubernetes worker instance id"
+        ValueError, match="missing required non-empty kubernetes worker node id"
     ):
-        cartography.intel.civo.kubernetes.transform_instances([cluster])
+        cartography.intel.civo.kubernetes.transform_worker_nodes([cluster])

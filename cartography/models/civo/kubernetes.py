@@ -166,7 +166,7 @@ class CivoKubernetesClusterSchema(CartographyNodeSchema):
 
 
 @dataclass(frozen=True)
-class CivoKubernetesPoolNodeProperties(CartographyNodeProperties):
+class CivoKubernetesNodePoolNodeProperties(CartographyNodeProperties):
     id: PropertyRef = PropertyRef("id", description="Civo Kubernetes node pool ID.")
     lastupdated: PropertyRef = PropertyRef("lastupdated", set_in_kwargs=True)
     cluster_id: PropertyRef = PropertyRef(
@@ -186,14 +186,14 @@ class CivoKubernetesPoolNodeProperties(CartographyNodeProperties):
 
 
 @dataclass(frozen=True)
-class CivoKubernetesPoolToAccountRelProperties(CartographyRelProperties):
+class CivoKubernetesNodePoolToAccountRelProperties(CartographyRelProperties):
     lastupdated: PropertyRef = PropertyRef("lastupdated", set_in_kwargs=True)
 
 
 @dataclass(frozen=True)
-# (:CivoAccount)-[:RESOURCE]->(:CivoKubernetesPool)
-class CivoKubernetesPoolToAccountRel(CartographyRelSchema):
-    """Connects `CivoAccount` to `CivoKubernetesPool` through `RESOURCE`."""
+# (:CivoAccount)-[:RESOURCE]->(:CivoKubernetesNodePool)
+class CivoKubernetesNodePoolToAccountRel(CartographyRelSchema):
+    """Connects `CivoAccount` to `CivoKubernetesNodePool` through `RESOURCE`."""
 
     target_node_label: str = "CivoAccount"
     target_node_matcher: TargetNodeMatcher = make_target_node_matcher(
@@ -201,48 +201,48 @@ class CivoKubernetesPoolToAccountRel(CartographyRelSchema):
     )
     direction: LinkDirection = LinkDirection.INWARD
     rel_label: str = "RESOURCE"
-    properties: CivoKubernetesPoolToAccountRelProperties = (
-        CivoKubernetesPoolToAccountRelProperties()
+    properties: CivoKubernetesNodePoolToAccountRelProperties = (
+        CivoKubernetesNodePoolToAccountRelProperties()
     )
 
 
 @dataclass(frozen=True)
-class CivoKubernetesPoolToClusterRelProperties(CartographyRelProperties):
+class CivoKubernetesNodePoolToClusterRelProperties(CartographyRelProperties):
     lastupdated: PropertyRef = PropertyRef("lastupdated", set_in_kwargs=True)
 
 
 @dataclass(frozen=True)
-# (:CivoKubernetesCluster)-[:HAS_POOL]->(:CivoKubernetesPool)
-class CivoKubernetesPoolToClusterRel(CartographyRelSchema):
-    """Connects `CivoKubernetesCluster` to its `CivoKubernetesPool`s."""
+# (:CivoKubernetesCluster)-[:HAS_NODE_POOL]->(:CivoKubernetesNodePool)
+class CivoKubernetesNodePoolToClusterRel(CartographyRelSchema):
+    """Connects `CivoKubernetesCluster` to its `CivoKubernetesNodePool`s."""
 
     target_node_label: str = "CivoKubernetesCluster"
     target_node_matcher: TargetNodeMatcher = make_target_node_matcher(
         {"id": PropertyRef("cluster_id")},
     )
     direction: LinkDirection = LinkDirection.INWARD
-    rel_label: str = "HAS_POOL"
-    properties: CivoKubernetesPoolToClusterRelProperties = (
-        CivoKubernetesPoolToClusterRelProperties()
+    rel_label: str = "HAS_NODE_POOL"
+    properties: CivoKubernetesNodePoolToClusterRelProperties = (
+        CivoKubernetesNodePoolToClusterRelProperties()
     )
 
 
 @dataclass(frozen=True)
-class CivoKubernetesPoolSchema(CartographyNodeSchema):
+class CivoKubernetesNodePoolSchema(CartographyNodeSchema):
     """A node pool within a `CivoKubernetesCluster`."""
 
-    label: str = "CivoKubernetesPool"
-    properties: CivoKubernetesPoolNodeProperties = CivoKubernetesPoolNodeProperties()
-    sub_resource_relationship: CivoKubernetesPoolToAccountRel = (
-        CivoKubernetesPoolToAccountRel()
+    label: str = "CivoKubernetesNodePool"
+    properties: CivoKubernetesNodePoolNodeProperties = CivoKubernetesNodePoolNodeProperties()
+    sub_resource_relationship: CivoKubernetesNodePoolToAccountRel = (
+        CivoKubernetesNodePoolToAccountRel()
     )
     other_relationships: OtherRelationships = OtherRelationships(
-        [CivoKubernetesPoolToClusterRel()],
+        [CivoKubernetesNodePoolToClusterRel()],
     )
 
 
 @dataclass(frozen=True)
-class CivoKubernetesInstanceNodeProperties(CartographyNodeProperties):
+class CivoKubernetesWorkerNodeProperties(CartographyNodeProperties):
     id: PropertyRef = PropertyRef("id", description="Civo Kubernetes worker node ID.")
     lastupdated: PropertyRef = PropertyRef("lastupdated", set_in_kwargs=True)
     hostname: PropertyRef = PropertyRef(
@@ -299,14 +299,14 @@ class CivoKubernetesInstanceNodeProperties(CartographyNodeProperties):
 
 
 @dataclass(frozen=True)
-class CivoKubernetesInstanceToAccountRelProperties(CartographyRelProperties):
+class CivoKubernetesWorkerNodeToAccountRelProperties(CartographyRelProperties):
     lastupdated: PropertyRef = PropertyRef("lastupdated", set_in_kwargs=True)
 
 
 @dataclass(frozen=True)
-# (:CivoAccount)-[:RESOURCE]->(:CivoKubernetesInstance)
-class CivoKubernetesInstanceToAccountRel(CartographyRelSchema):
-    """Connects `CivoAccount` to `CivoKubernetesInstance` through `RESOURCE`."""
+# (:CivoAccount)-[:RESOURCE]->(:CivoKubernetesWorkerNode)
+class CivoKubernetesWorkerNodeToAccountRel(CartographyRelSchema):
+    """Connects `CivoAccount` to `CivoKubernetesWorkerNode` through `RESOURCE`."""
 
     target_node_label: str = "CivoAccount"
     target_node_matcher: TargetNodeMatcher = make_target_node_matcher(
@@ -314,41 +314,41 @@ class CivoKubernetesInstanceToAccountRel(CartographyRelSchema):
     )
     direction: LinkDirection = LinkDirection.INWARD
     rel_label: str = "RESOURCE"
-    properties: CivoKubernetesInstanceToAccountRelProperties = (
-        CivoKubernetesInstanceToAccountRelProperties()
+    properties: CivoKubernetesWorkerNodeToAccountRelProperties = (
+        CivoKubernetesWorkerNodeToAccountRelProperties()
     )
 
 
 @dataclass(frozen=True)
-class CivoKubernetesInstanceToPoolRelProperties(CartographyRelProperties):
+class CivoKubernetesWorkerNodeToNodePoolRelProperties(CartographyRelProperties):
     lastupdated: PropertyRef = PropertyRef("lastupdated", set_in_kwargs=True)
 
 
 @dataclass(frozen=True)
-# (:CivoKubernetesPool)-[:HAS_WORKER_INSTANCE]->(:CivoKubernetesInstance)
-class CivoKubernetesInstanceToPoolRel(CartographyRelSchema):
-    """Connects `CivoKubernetesPool` to its `CivoKubernetesInstance` worker nodes."""
+# (:CivoKubernetesNodePool)-[:HAS_WORKER_NODE]->(:CivoKubernetesWorkerNode)
+class CivoKubernetesWorkerNodeToNodePoolRel(CartographyRelSchema):
+    """Connects `CivoKubernetesNodePool` to its `CivoKubernetesWorkerNode` worker nodes."""
 
-    target_node_label: str = "CivoKubernetesPool"
+    target_node_label: str = "CivoKubernetesNodePool"
     target_node_matcher: TargetNodeMatcher = make_target_node_matcher(
         {"id": PropertyRef("pool_id")},
     )
     direction: LinkDirection = LinkDirection.INWARD
-    rel_label: str = "HAS_WORKER_INSTANCE"
-    properties: CivoKubernetesInstanceToPoolRelProperties = (
-        CivoKubernetesInstanceToPoolRelProperties()
+    rel_label: str = "HAS_WORKER_NODE"
+    properties: CivoKubernetesWorkerNodeToNodePoolRelProperties = (
+        CivoKubernetesWorkerNodeToNodePoolRelProperties()
     )
 
 
 @dataclass(frozen=True)
-class CivoKubernetesInstanceToNetworkRelProperties(CartographyRelProperties):
+class CivoKubernetesWorkerNodeToNetworkRelProperties(CartographyRelProperties):
     lastupdated: PropertyRef = PropertyRef("lastupdated", set_in_kwargs=True)
 
 
 @dataclass(frozen=True)
-# (:CivoKubernetesInstance)-[:PART_OF_NETWORK]->(:CivoNetwork)
-class CivoKubernetesInstanceToNetworkRel(CartographyRelSchema):
-    """Connects `CivoKubernetesInstance` to the `CivoNetwork` it's on."""
+# (:CivoKubernetesWorkerNode)-[:PART_OF_NETWORK]->(:CivoNetwork)
+class CivoKubernetesWorkerNodeToNetworkRel(CartographyRelSchema):
+    """Connects `CivoKubernetesWorkerNode` to the `CivoNetwork` it's on."""
 
     target_node_label: str = "CivoNetwork"
     target_node_matcher: TargetNodeMatcher = make_target_node_matcher(
@@ -356,20 +356,20 @@ class CivoKubernetesInstanceToNetworkRel(CartographyRelSchema):
     )
     direction: LinkDirection = LinkDirection.OUTWARD
     rel_label: str = "PART_OF_NETWORK"
-    properties: CivoKubernetesInstanceToNetworkRelProperties = (
-        CivoKubernetesInstanceToNetworkRelProperties()
+    properties: CivoKubernetesWorkerNodeToNetworkRelProperties = (
+        CivoKubernetesWorkerNodeToNetworkRelProperties()
     )
 
 
 @dataclass(frozen=True)
-class CivoKubernetesInstanceToFirewallRelProperties(CartographyRelProperties):
+class CivoKubernetesWorkerNodeToFirewallRelProperties(CartographyRelProperties):
     lastupdated: PropertyRef = PropertyRef("lastupdated", set_in_kwargs=True)
 
 
 @dataclass(frozen=True)
-# (:CivoKubernetesInstance)-[:PROTECTED_BY]->(:CivoFirewall)
-class CivoKubernetesInstanceToFirewallRel(CartographyRelSchema):
-    """Connects `CivoKubernetesInstance` to the `CivoFirewall` protecting it."""
+# (:CivoKubernetesWorkerNode)-[:PROTECTED_BY]->(:CivoFirewall)
+class CivoKubernetesWorkerNodeToFirewallRel(CartographyRelSchema):
+    """Connects `CivoKubernetesWorkerNode` to the `CivoFirewall` protecting it."""
 
     target_node_label: str = "CivoFirewall"
     target_node_matcher: TargetNodeMatcher = make_target_node_matcher(
@@ -377,14 +377,14 @@ class CivoKubernetesInstanceToFirewallRel(CartographyRelSchema):
     )
     direction: LinkDirection = LinkDirection.OUTWARD
     rel_label: str = "PROTECTED_BY"
-    properties: CivoKubernetesInstanceToFirewallRelProperties = (
-        CivoKubernetesInstanceToFirewallRelProperties()
+    properties: CivoKubernetesWorkerNodeToFirewallRelProperties = (
+        CivoKubernetesWorkerNodeToFirewallRelProperties()
     )
 
 
 @dataclass(frozen=True)
-class CivoKubernetesInstanceSchema(CartographyNodeSchema):
-    """A worker node (compute instance) within a `CivoKubernetesPool`. Excludes
+class CivoKubernetesWorkerNodeSchema(CartographyNodeSchema):
+    """A worker node (compute instance) within a `CivoKubernetesNodePool`. Excludes
     several fields returned by the API that are real credentials: `initial_password`,
     `civostatsd_token` (both real credentials), `ssh_key` (a placeholder on
     k3s nodes today, but not one to trust as safe), and `script`.
@@ -392,18 +392,18 @@ class CivoKubernetesInstanceSchema(CartographyNodeSchema):
     `PART_OF_NETWORK` and `PROTECTED_BY` link the worker node to its network
     and firewall when the referenced resources are present in the graph."""
 
-    label: str = "CivoKubernetesInstance"
-    properties: CivoKubernetesInstanceNodeProperties = (
-        CivoKubernetesInstanceNodeProperties()
+    label: str = "CivoKubernetesWorkerNode"
+    properties: CivoKubernetesWorkerNodeProperties = (
+        CivoKubernetesWorkerNodeProperties()
     )
     extra_node_labels: ExtraNodeLabels = ExtraNodeLabels([COMPUTE_INSTANCE])
-    sub_resource_relationship: CivoKubernetesInstanceToAccountRel = (
-        CivoKubernetesInstanceToAccountRel()
+    sub_resource_relationship: CivoKubernetesWorkerNodeToAccountRel = (
+        CivoKubernetesWorkerNodeToAccountRel()
     )
     other_relationships: OtherRelationships = OtherRelationships(
         [
-            CivoKubernetesInstanceToPoolRel(),
-            CivoKubernetesInstanceToNetworkRel(),
-            CivoKubernetesInstanceToFirewallRel(),
+            CivoKubernetesWorkerNodeToNodePoolRel(),
+            CivoKubernetesWorkerNodeToNetworkRel(),
+            CivoKubernetesWorkerNodeToFirewallRel(),
         ],
     )

@@ -10,8 +10,8 @@ from cartography.intel.civo.util import fan_out_paginated_across_regions
 from cartography.intel.civo.util import region_codes_for_feature
 from cartography.intel.civo.util import require_non_empty
 from cartography.models.civo.kubernetes import CivoKubernetesClusterSchema
-from cartography.models.civo.kubernetes import CivoKubernetesInstanceSchema
-from cartography.models.civo.kubernetes import CivoKubernetesPoolSchema
+from cartography.models.civo.kubernetes import CivoKubernetesNodePoolSchema
+from cartography.models.civo.kubernetes import CivoKubernetesWorkerNodeSchema
 from cartography.util import timeit
 
 logger = logging.getLogger(__name__)
@@ -32,8 +32,8 @@ def sync(
         region_codes,
     )
     transformed_clusters = transform_clusters(clusters)
-    pools = transform_pools(clusters)
-    instances = transform_instances(clusters)
+    node_pools = transform_node_pools(clusters)
+    worker_nodes = transform_worker_nodes(clusters)
 
     load_clusters(
         neo4j_session,
@@ -41,15 +41,15 @@ def sync(
         common_job_parameters["ACCOUNT_ID"],
         common_job_parameters["UPDATE_TAG"],
     )
-    load_pools(
+    load_node_pools(
         neo4j_session,
-        pools,
+        node_pools,
         common_job_parameters["ACCOUNT_ID"],
         common_job_parameters["UPDATE_TAG"],
     )
-    load_instances(
+    load_worker_nodes(
         neo4j_session,
-        instances,
+        worker_nodes,
         common_job_parameters["ACCOUNT_ID"],
         common_job_parameters["UPDATE_TAG"],
     )
@@ -109,7 +109,7 @@ def transform_clusters(clusters: list[dict[str, Any]]) -> list[dict[str, Any]]:
     return result
 
 
-def transform_pools(clusters: list[dict[str, Any]]) -> list[dict[str, Any]]:
+def transform_node_pools(clusters: list[dict[str, Any]]) -> list[dict[str, Any]]:
     result = []
     for cluster in clusters:
         cluster_id = require_non_empty(cluster.get("id"), "cluster id")
@@ -128,11 +128,11 @@ def transform_pools(clusters: list[dict[str, Any]]) -> list[dict[str, Any]]:
     return result
 
 
-def transform_instances(clusters: list[dict[str, Any]]) -> list[dict[str, Any]]:
+def transform_worker_nodes(clusters: list[dict[str, Any]]) -> list[dict[str, Any]]:
     """
     Kubernetes worker nodes are full compute instances (they count against
     the account's instance quota, confirmed live) - previously discarded
-    entirely, since transform_pools only read `instance_names` (bare
+    entirely, since transform_node_pools only read `instance_names` (bare
     strings). Reads each pool's own `instances` list (not the cluster-level
     `instances`, which is just the same objects flattened across every
     pool) so pool_id is captured directly. Drops `initial_password` and
@@ -152,7 +152,7 @@ def transform_instances(clusters: list[dict[str, Any]]) -> list[dict[str, Any]]:
             pool_id = require_non_empty(pool.get("id"), "kubernetes pool id")
             for instance in pool.get("instances") or []:
                 instance_id = require_non_empty(
-                    instance.get("id"), "kubernetes worker instance id"
+                    instance.get("id"), "kubernetes worker node id"
                 )
                 result.append(
                     {
@@ -197,7 +197,7 @@ def load_clusters(
 
 
 @timeit
-def load_pools(
+def load_node_pools(
     neo4j_session: neo4j.Session,
     data: list[dict[str, Any]],
     account_id: str,
@@ -205,7 +205,7 @@ def load_pools(
 ) -> None:
     load(
         neo4j_session,
-        CivoKubernetesPoolSchema(),
+        CivoKubernetesNodePoolSchema(),
         data,
         lastupdated=update_tag,
         ACCOUNT_ID=account_id,
@@ -213,7 +213,7 @@ def load_pools(
 
 
 @timeit
-def load_instances(
+def load_worker_nodes(
     neo4j_session: neo4j.Session,
     data: list[dict[str, Any]],
     account_id: str,
@@ -221,7 +221,7 @@ def load_instances(
 ) -> None:
     load(
         neo4j_session,
-        CivoKubernetesInstanceSchema(),
+        CivoKubernetesWorkerNodeSchema(),
         data,
         lastupdated=update_tag,
         ACCOUNT_ID=account_id,
@@ -234,9 +234,9 @@ def cleanup(
     common_job_parameters: dict[str, Any],
 ) -> None:
     GraphJob.from_node_schema(
-        CivoKubernetesInstanceSchema(), common_job_parameters
+        CivoKubernetesWorkerNodeSchema(), common_job_parameters
     ).run(neo4j_session)
-    GraphJob.from_node_schema(CivoKubernetesPoolSchema(), common_job_parameters).run(
+    GraphJob.from_node_schema(CivoKubernetesNodePoolSchema(), common_job_parameters).run(
         neo4j_session,
     )
     GraphJob.from_node_schema(CivoKubernetesClusterSchema(), common_job_parameters).run(

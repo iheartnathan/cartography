@@ -14,8 +14,8 @@ from tests.data.civo.firewalls import FIREWALLS_RESPONSE
 from tests.data.civo.firewalls import TEST_FIREWALL_ID
 from tests.data.civo.kubernetes import KUBERNETES_CLUSTERS_PAGE
 from tests.data.civo.kubernetes import TEST_CLUSTER_ID
-from tests.data.civo.kubernetes import TEST_POOL_ID
-from tests.data.civo.kubernetes import TEST_WORKER_INSTANCE_ID
+from tests.data.civo.kubernetes import TEST_NODE_POOL_ID
+from tests.data.civo.kubernetes import TEST_WORKER_NODE_ID
 from tests.data.civo.networks import NETWORKS_RESPONSE
 from tests.data.civo.networks import SUBNETS_RESPONSE
 from tests.data.civo.networks import TEST_NETWORK_ID
@@ -148,54 +148,54 @@ def test_civo_kubernetes_graph(
         "PROTECTED_BY",
     ) == {(TEST_CLUSTER_ID, TEST_FIREWALL_ID)}
 
-    # Assert: CivoKubernetesPool linked to its cluster.
+    # Assert: CivoKubernetesNodePool linked to its cluster.
     assert check_rels(
         neo4j_session,
         "CivoKubernetesCluster",
         "id",
-        "CivoKubernetesPool",
+        "CivoKubernetesNodePool",
         "id",
-        "HAS_POOL",
-    ) == {(TEST_CLUSTER_ID, TEST_POOL_ID)}
+        "HAS_NODE_POOL",
+    ) == {(TEST_CLUSTER_ID, TEST_NODE_POOL_ID)}
 
-    # Assert: CivoKubernetesInstance (a worker node) loaded, linked to its
+    # Assert: CivoKubernetesWorkerNode (a worker node) loaded, linked to its
     # pool, with the ComputeInstance ontology label, its region inherited
     # from the parent cluster (worker-node objects carry none of their
     # own), and no worker-node secrets anywhere on it.
     assert check_nodes(
         neo4j_session,
-        "CivoKubernetesInstance",
+        "CivoKubernetesWorkerNode",
         ["id", "hostname", "_ont_state", "region", "_ont_region"],
     ) == {
-        (TEST_WORKER_INSTANCE_ID, "prod-cluster-pool-abc-1", "running", "lon1", "lon1")
+        (TEST_WORKER_NODE_ID, "prod-cluster-pool-abc-1", "running", "lon1", "lon1")
     }
     assert check_rels(
         neo4j_session,
-        "CivoKubernetesPool",
+        "CivoKubernetesNodePool",
         "id",
-        "CivoKubernetesInstance",
+        "CivoKubernetesWorkerNode",
         "id",
-        "HAS_WORKER_INSTANCE",
-    ) == {(TEST_POOL_ID, TEST_WORKER_INSTANCE_ID)}
+        "HAS_WORKER_NODE",
+    ) == {(TEST_NODE_POOL_ID, TEST_WORKER_NODE_ID)}
     assert check_rels(
         neo4j_session,
-        "CivoKubernetesInstance",
+        "CivoKubernetesWorkerNode",
         "id",
         "CivoNetwork",
         "id",
         "PART_OF_NETWORK",
-    ) == {(TEST_WORKER_INSTANCE_ID, TEST_NETWORK_ID)}
+    ) == {(TEST_WORKER_NODE_ID, TEST_NETWORK_ID)}
     assert check_rels(
         neo4j_session,
-        "CivoKubernetesInstance",
+        "CivoKubernetesWorkerNode",
         "id",
         "CivoFirewall",
         "id",
         "PROTECTED_BY",
-    ) == {(TEST_WORKER_INSTANCE_ID, TEST_FIREWALL_ID)}
+    ) == {(TEST_WORKER_NODE_ID, TEST_FIREWALL_ID)}
     worker_props = neo4j_session.run(
-        "MATCH (n:CivoKubernetesInstance {id: $id}) RETURN properties(n) AS props",
-        id=TEST_WORKER_INSTANCE_ID,
+        "MATCH (n:CivoKubernetesWorkerNode {id: $id}) RETURN properties(n) AS props",
+        id=TEST_WORKER_NODE_ID,
     ).single()["props"]
     for secret_field in ("initial_password", "civostatsd_token", "ssh_key", "script"):
         assert secret_field not in worker_props
