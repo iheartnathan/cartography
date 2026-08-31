@@ -14,8 +14,10 @@ from tests.data.civo.iam import ROLES_RESPONSE
 from tests.data.civo.iam import TEAM_MEMBERS_RESPONSE
 from tests.data.civo.iam import TEAMS_RESPONSE
 from tests.data.civo.iam import TEST_CUSTOM_ROLE_ID
+from tests.data.civo.iam import TEST_ORGANISATION_ROLE_ID
 from tests.data.civo.iam import TEST_ROLE_ID
 from tests.data.civo.iam import TEST_ROLE_OWNER_ACCOUNT_ID
+from tests.data.civo.iam import TEST_ROLE_OWNER_ORGANISATION_ID
 from tests.data.civo.iam import TEST_TEAM_ID
 from tests.data.civo.iam import TEST_TEAM_MEMBER_ID
 from tests.integration.util import check_nodes
@@ -126,6 +128,7 @@ def test_civo_iam_sync(
     # test_civo_iam_two_accounts_do_not_collide_on_cleanup for why).
     role_id_a = f"{TEST_ACCOUNT_ID}/{TEST_ROLE_ID}"
     custom_role_id_a = f"{TEST_ACCOUNT_ID}/{TEST_CUSTOM_ROLE_ID}"
+    organisation_role_id_a = f"{TEST_ACCOUNT_ID}/{TEST_ORGANISATION_ROLE_ID}"
     assert check_nodes(
         neo4j_session,
         "CivoRole",
@@ -134,18 +137,37 @@ def test_civo_iam_sync(
             "role_id",
             "name",
             "_ont_type",
+            "_ont_scope",
             "owner_account_id",
             "owner_organisation_id",
         ],
     ) == {
-        (role_id_a, TEST_ROLE_ID, "Company administrator", "builtin", None, None),
+        (
+            role_id_a,
+            TEST_ROLE_ID,
+            "Company administrator",
+            "builtin",
+            "account",
+            None,
+            None,
+        ),
         (
             custom_role_id_a,
             TEST_CUSTOM_ROLE_ID,
             "cartography-livetest-role",
             "custom",
+            "account",
             TEST_ROLE_OWNER_ACCOUNT_ID,
             None,
+        ),
+        (
+            organisation_role_id_a,
+            TEST_ORGANISATION_ROLE_ID,
+            "organisation-auditor",
+            "custom",
+            "org",
+            None,
+            TEST_ROLE_OWNER_ORGANISATION_ID,
         ),
     }
 
@@ -177,7 +199,7 @@ def test_civo_iam_sync(
         )
     }
 
-    # Assert: GRANTS resolves for every one of both roles' permission
+    # Assert: GRANTS resolves for every role's permission
     # entries now, including the wildcards - not just the one that happens
     # to be in the small live catalog.
     assert check_rels(
@@ -188,6 +210,8 @@ def test_civo_iam_sync(
         (role_id_a, _perm_id("team.*")),
         (custom_role_id_a, _perm_id("billing.read")),
         (custom_role_id_a, _perm_id("team.read")),
+        (organisation_role_id_a, _perm_id("billing.read")),
+        (organisation_role_id_a, _perm_id("team.read")),
     }
 
     # Assert: the member's direct permission resolves to

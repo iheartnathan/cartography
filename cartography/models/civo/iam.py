@@ -276,6 +276,11 @@ class CivoRoleNodeProperties(CartographyNodeProperties):
         " `type` field only - a Neo4j boolean property can't be compared"
         " against a mapping's string literals).",
     )
+    role_scope: PropertyRef = PropertyRef(
+        "role_scope",
+        description="Canonical role scope: `org` when Civo reports an"
+        " `organisation_id`, otherwise `account`.",
+    )
     permission_codes: PropertyRef = PropertyRef(
         "permission_codes",
         description="`permissions` split into a list of"

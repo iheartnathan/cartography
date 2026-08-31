@@ -9,8 +9,10 @@ from tests.data.civo.iam import ROLES_RESPONSE
 from tests.data.civo.iam import TEAM_MEMBERS_RESPONSE
 from tests.data.civo.iam import TEAMS_RESPONSE
 from tests.data.civo.iam import TEST_CUSTOM_ROLE_ID
+from tests.data.civo.iam import TEST_ORGANISATION_ROLE_ID
 from tests.data.civo.iam import TEST_ROLE_ID
 from tests.data.civo.iam import TEST_ROLE_OWNER_ACCOUNT_ID
+from tests.data.civo.iam import TEST_ROLE_OWNER_ORGANISATION_ID
 from tests.data.civo.iam import TEST_TEAM_ID
 from tests.data.civo.iam import TEST_TEAM_MEMBER_ID
 
@@ -105,6 +107,7 @@ def test_transform_roles_splits_permission_codes() -> None:
     # A built-in role owns neither an account nor an organisation.
     assert row["owner_account_id"] is None
     assert row["owner_organisation_id"] is None
+    assert row["role_scope"] == "account"
 
 
 def test_transform_roles_same_role_different_accounts_get_different_ids() -> None:
@@ -129,6 +132,17 @@ def test_transform_roles_keeps_custom_role_owner_account_id() -> None:
 
     assert roles[0]["owner_account_id"] == TEST_ROLE_OWNER_ACCOUNT_ID
     assert roles[0]["owner_organisation_id"] is None
+    assert roles[0]["role_scope"] == "account"
+
+
+def test_transform_roles_maps_organisation_owned_role_scope() -> None:
+    role = next(r for r in ROLES_RESPONSE if r["id"] == TEST_ORGANISATION_ROLE_ID)
+
+    roles = cartography.intel.civo.iam.transform_roles([role], TEST_ACCOUNT_ID_A)
+
+    assert roles[0]["owner_account_id"] is None
+    assert roles[0]["owner_organisation_id"] == TEST_ROLE_OWNER_ORGANISATION_ID
+    assert roles[0]["role_scope"] == "org"
 
 
 def test_transform_roles_custom_role_type() -> None:

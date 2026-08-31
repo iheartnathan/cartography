@@ -211,6 +211,10 @@ def transform_roles(
                 ],
                 "owner_account_id": role.get("account_id") or None,
                 "owner_organisation_id": role.get("organisation_id") or None,
+                # Organisation-owned roles can be reused across the
+                # organisation's accounts; all other roles are scoped to the
+                # account under which this response was retrieved.
+                "role_scope": "org" if role.get("organisation_id") else "account",
                 "created_at": role.get("created_at"),
             }
         )

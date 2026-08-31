@@ -432,16 +432,7 @@ civo_mapping = OntologyMapping(
                     ontology_field="name", node_field="name", required=True
                 ),
                 OntologyFieldMapping(ontology_field="type", node_field="role_type"),
-                # scope: Civo roles are listed per-account, and the built-in
-                # roles returned carry an empty organisation_id/account_id
-                # (confirmed live), so "account" is the closest honest fit
-                # to the canonical scope set.
-                OntologyFieldMapping(
-                    ontology_field="scope",
-                    node_field="",
-                    special_handling="static_value",
-                    extra={"value": "account"},
-                ),
+                OntologyFieldMapping(ontology_field="scope", node_field="role_scope"),
             ],
         ),
     ],

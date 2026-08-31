@@ -4,8 +4,10 @@ TEST_TEAM_ID = "70c998c0-697b-4e39-8dca-9cf4eb8fd53b"
 TEST_TEAM_MEMBER_ID = "9e9e2e16-5a27-4f70-b31c-6a1cd176c4f3"
 TEST_ROLE_ID = "35b3f5ee-6fdd-46b3-9e29-caa3d2e2b111"
 TEST_CUSTOM_ROLE_ID = "699b8ec2-bc9a-4188-9a48-1450c615608e"
+TEST_ORGANISATION_ROLE_ID = "66e68164-f12c-4da5-8eef-5f4c9ef66437"
 TEST_USER_ID = "eb08afb9-60fa-459a-a664-0563a29b3a58"
 TEST_ROLE_OWNER_ACCOUNT_ID = "ba425368-a44e-49ce-8e18-acf50753a805"
+TEST_ROLE_OWNER_ORGANISATION_ID = "8a0a2260-75e8-4363-b073-feca9ad39586"
 
 TEAMS_RESPONSE: list[dict[str, Any]] = [
     {
@@ -61,6 +63,16 @@ ROLES_RESPONSE: list[dict[str, Any]] = [
         "built_in": False,
         "created_at": "2026-08-31T10:44:18Z",
         "updated_at": "2026-08-31T10:44:18Z",
+    },
+    {
+        "id": TEST_ORGANISATION_ROLE_ID,
+        "name": "organisation-auditor",
+        "permissions": "billing.read,team.read",
+        "organisation_id": TEST_ROLE_OWNER_ORGANISATION_ID,
+        "account_id": "",
+        "built_in": False,
+        "created_at": "2026-08-31T10:45:18Z",
+        "updated_at": "2026-08-31T10:45:18Z",
     },
 ]
 
