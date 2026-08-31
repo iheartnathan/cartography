@@ -166,9 +166,7 @@ def test_civo_kubernetes_graph(
         neo4j_session,
         "CivoKubernetesWorkerNode",
         ["id", "hostname", "_ont_state", "region", "_ont_region"],
-    ) == {
-        (TEST_WORKER_NODE_ID, "prod-cluster-pool-abc-1", "running", "lon1", "lon1")
-    }
+    ) == {(TEST_WORKER_NODE_ID, "prod-cluster-pool-abc-1", "running", "lon1", "lon1")}
     assert check_rels(
         neo4j_session,
         "CivoKubernetesNodePool",

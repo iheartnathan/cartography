@@ -232,7 +232,9 @@ class CivoKubernetesNodePoolSchema(CartographyNodeSchema):
     """A node pool within a `CivoKubernetesCluster`."""
 
     label: str = "CivoKubernetesNodePool"
-    properties: CivoKubernetesNodePoolNodeProperties = CivoKubernetesNodePoolNodeProperties()
+    properties: CivoKubernetesNodePoolNodeProperties = (
+        CivoKubernetesNodePoolNodeProperties()
+    )
     sub_resource_relationship: CivoKubernetesNodePoolToAccountRel = (
         CivoKubernetesNodePoolToAccountRel()
     )

@@ -236,7 +236,9 @@ def cleanup(
     GraphJob.from_node_schema(
         CivoKubernetesWorkerNodeSchema(), common_job_parameters
     ).run(neo4j_session)
-    GraphJob.from_node_schema(CivoKubernetesNodePoolSchema(), common_job_parameters).run(
+    GraphJob.from_node_schema(
+        CivoKubernetesNodePoolSchema(), common_job_parameters
+    ).run(
         neo4j_session,
     )
     GraphJob.from_node_schema(CivoKubernetesClusterSchema(), common_job_parameters).run(
