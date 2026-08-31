@@ -263,6 +263,38 @@ _SNOWFLAKE_COMPUTE_POOL_STATUS = {
     "SUSPENDED": "unknown",
 }
 
+# Civo KubernetesCluster.status. "BUILDING" is documented in the API docs;
+# "ACTIVE" is confirmed independently via Civo's own CLI docs (`civo
+# kubernetes list`/`show` display ACTIVE for a running cluster, and `--wait`
+# spins until the cluster reaches ACTIVE) - not guessed, and not merely
+# cross-applied from CivoInstance.status. No complete vocabulary is
+# documented beyond these two, so only they are mapped.
+_CIVO_KUBERNETES_STATUS = {
+    "BUILDING": "creating",
+    "ACTIVE": "active",
+}
+
+civo_kubernetes_mapping = OntologyMapping(
+    module_name="civo",
+    nodes=[
+        OntologyNodeMapping(
+            node_label="CivoKubernetesCluster",
+            fields=[
+                OntologyFieldMapping(
+                    ontology_field="name", node_field="name", required=True
+                ),
+                OntologyFieldMapping(
+                    ontology_field="status",
+                    node_field="status",
+                    special_handling="mapping",
+                    extra={"map": _CIVO_KUBERNETES_STATUS},
+                ),
+                OntologyFieldMapping(ontology_field="region", node_field="region"),
+            ],
+        ),
+    ],
+)
+
 CLUSTERS_ONTOLOGY_MAPPING: dict[str, OntologyMapping] = {
     "aws_eks": aws_eks_mapping,
     "aws_ecs": aws_ecs_mapping,
@@ -271,6 +303,7 @@ CLUSTERS_ONTOLOGY_MAPPING: dict[str, OntologyMapping] = {
     "gcp_gke": gcp_gke_mapping,
     "kubernetes": kubernetes_mapping,
     "scaleway_kapsule": scaleway_kapsule_mapping,
+    "civo_kubernetes": civo_kubernetes_mapping,
     "snowflake": OntologyMapping(
         module_name="snowflake",
         nodes=[
