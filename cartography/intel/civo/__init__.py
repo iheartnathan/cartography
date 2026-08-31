@@ -6,6 +6,7 @@ from requests.adapters import HTTPAdapter
 from urllib3 import Retry
 
 import cartography.intel.civo.account
+import cartography.intel.civo.dns
 import cartography.intel.civo.firewalls
 import cartography.intel.civo.instances
 import cartography.intel.civo.ips
@@ -75,6 +76,11 @@ def start_civo_ingestion(neo4j_session: neo4j.Session, config: Config) -> None:
     # Permission - none of Civo's account, ssh key, DNS, or IAM endpoints
     # are region-scoped).
     cartography.intel.civo.sshkeys.sync(
+        neo4j_session,
+        api_session,
+        common_job_parameters,
+    )
+    cartography.intel.civo.dns.sync(
         neo4j_session,
         api_session,
         common_job_parameters,
@@ -150,6 +156,7 @@ def start_civo_ingestion(neo4j_session: neo4j.Session, config: Config) -> None:
     cartography.intel.civo.instances.cleanup(neo4j_session, common_job_parameters)
     cartography.intel.civo.firewalls.cleanup(neo4j_session, common_job_parameters)
     cartography.intel.civo.networks.cleanup(neo4j_session, common_job_parameters)
+    cartography.intel.civo.dns.cleanup(neo4j_session, common_job_parameters)
     cartography.intel.civo.sshkeys.cleanup(neo4j_session, common_job_parameters)
     # CivoAccountSchema has no relationships of its own (it's the root
     # tenant), so its cleanup() is a no-op today - same as every other
