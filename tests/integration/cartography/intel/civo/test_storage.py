@@ -74,13 +74,9 @@ def test_civo_volumes_objectstores_graph(
     neo4j_session,
 ):
     """
-    CivoVolume/CivoObjectStore loaded standalone. instance_id/cluster_id/
-    network_id are kept as plain properties only in this PR, not wired as
-    relationships - CivoInstance/CivoKubernetesCluster/CivoNetwork are
-    owned by the separate Compute/Kubernetes/Networking PRs and don't
-    exist on this branch. Those edges are added in a follow-up
-    cross-resource-relationships PR once every Civo resource PR has
-    merged (see the PR split plan).
+    Sync only the storage domain and verify volume/object-store properties,
+    ownership, and secret exclusions. Cross-domain relationship resolution is
+    covered by the final relationship layer with matching target nodes loaded.
     """
     # Arrange
     api_session = requests.Session()
