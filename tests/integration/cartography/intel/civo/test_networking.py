@@ -128,3 +128,105 @@ def test_civo_network_firewall_graph(
     assert check_rels(
         neo4j_session, "CivoFirewall", "id", "CivoNetwork", "id", "PART_OF_NETWORK"
     ) == {(TEST_FIREWALL_ID, TEST_NETWORK_ID)}
+
+
+def test_civo_networking_cleanup_is_account_scoped(neo4j_session):
+    account_id = "networking-cleanup-account"
+    other_account_id = "networking-cleanup-other-account"
+    stale_network_id = "networking-cleanup-stale-network"
+    stale_subnet_id = "networking-cleanup-stale-subnet"
+    stale_firewall_id = "networking-cleanup-stale-firewall"
+    stale_rule_id = "networking-cleanup-stale-rule"
+    other_network_id = "networking-cleanup-other-network"
+    other_subnet_id = "networking-cleanup-other-subnet"
+    other_firewall_id = "networking-cleanup-other-firewall"
+    other_rule_id = "networking-cleanup-other-rule"
+
+    # Arrange: each account owns a complete network/firewall hierarchy from a
+    # previous sync. Only the first account is refreshed below.
+    cartography.intel.civo.account.load_accounts(
+        neo4j_session,
+        [{"id": account_id}, {"id": other_account_id}],
+        TEST_UPDATE_TAG,
+    )
+    for scoped_account_id, network_id, subnet_id, firewall_id, rule_id in (
+        (
+            account_id,
+            stale_network_id,
+            stale_subnet_id,
+            stale_firewall_id,
+            stale_rule_id,
+        ),
+        (
+            other_account_id,
+            other_network_id,
+            other_subnet_id,
+            other_firewall_id,
+            other_rule_id,
+        ),
+    ):
+        cartography.intel.civo.networks.load_networks(
+            neo4j_session,
+            [{"id": network_id}],
+            scoped_account_id,
+            TEST_UPDATE_TAG,
+        )
+        cartography.intel.civo.networks.load_subnets(
+            neo4j_session,
+            [{"id": subnet_id, "network_id": network_id}],
+            scoped_account_id,
+            TEST_UPDATE_TAG,
+        )
+        cartography.intel.civo.firewalls.load_firewalls(
+            neo4j_session,
+            [{"id": firewall_id, "network_id": network_id}],
+            scoped_account_id,
+            TEST_UPDATE_TAG,
+        )
+        cartography.intel.civo.firewalls.load_rules(
+            neo4j_session,
+            [{"id": rule_id, "firewall_id": firewall_id}],
+            scoped_account_id,
+            TEST_UPDATE_TAG,
+        )
+
+    # Act: a later complete sync for the first account observes none of its
+    # old resources. Cleanup must not cross the RESOURCE ownership boundary.
+    cleanup_parameters = {
+        "ACCOUNT_ID": account_id,
+        "UPDATE_TAG": TEST_UPDATE_TAG + 1,
+    }
+    cartography.intel.civo.firewalls.cleanup(neo4j_session, cleanup_parameters)
+    cartography.intel.civo.networks.cleanup(neo4j_session, cleanup_parameters)
+
+    # Assert: all four stale node types were removed for the active account,
+    # while the other account's equally stale hierarchy remains intact.
+    for removed_id, retained_id in (
+        (stale_network_id, other_network_id),
+        (stale_subnet_id, other_subnet_id),
+        (stale_firewall_id, other_firewall_id),
+        (stale_rule_id, other_rule_id),
+    ):
+        ids = {
+            record["id"]
+            for record in neo4j_session.run(
+                "MATCH (n) WHERE n.id IN $ids RETURN n.id AS id",
+                ids=[removed_id, retained_id],
+            )
+        }
+        assert removed_id not in ids
+        assert retained_id in ids
+
+    # Avoid leaving the deliberately retained account hierarchy in the shared
+    # integration database used by subsequent tests.
+    neo4j_session.run(
+        """
+        MATCH (account:CivoAccount {id: $account_id})-[:RESOURCE]->(resource)
+        DETACH DELETE resource
+        """,
+        account_id=other_account_id,
+    )
+    neo4j_session.run(
+        "MATCH (account:CivoAccount) WHERE account.id IN $ids DETACH DELETE account",
+        ids=[account_id, other_account_id],
+    )
