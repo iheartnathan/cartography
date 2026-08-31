@@ -107,48 +107,6 @@ class CivoInstanceToAccountRel(CartographyRelSchema):
 
 
 @dataclass(frozen=True)
-class CivoInstanceToNetworkRelProperties(CartographyRelProperties):
-    lastupdated: PropertyRef = PropertyRef("lastupdated", set_in_kwargs=True)
-
-
-@dataclass(frozen=True)
-# (:CivoInstance)-[:PART_OF_NETWORK]->(:CivoNetwork)
-class CivoInstanceToNetworkRel(CartographyRelSchema):
-    """Connects `CivoInstance` to the `CivoNetwork` it's attached to."""
-
-    target_node_label: str = "CivoNetwork"
-    target_node_matcher: TargetNodeMatcher = make_target_node_matcher(
-        {"id": PropertyRef("network_id")},
-    )
-    direction: LinkDirection = LinkDirection.OUTWARD
-    rel_label: str = "PART_OF_NETWORK"
-    properties: CivoInstanceToNetworkRelProperties = (
-        CivoInstanceToNetworkRelProperties()
-    )
-
-
-@dataclass(frozen=True)
-class CivoInstanceToFirewallRelProperties(CartographyRelProperties):
-    lastupdated: PropertyRef = PropertyRef("lastupdated", set_in_kwargs=True)
-
-
-@dataclass(frozen=True)
-# (:CivoInstance)-[:PROTECTED_BY]->(:CivoFirewall)
-class CivoInstanceToFirewallRel(CartographyRelSchema):
-    """Connects `CivoInstance` to the `CivoFirewall` protecting it."""
-
-    target_node_label: str = "CivoFirewall"
-    target_node_matcher: TargetNodeMatcher = make_target_node_matcher(
-        {"id": PropertyRef("firewall_id")},
-    )
-    direction: LinkDirection = LinkDirection.OUTWARD
-    rel_label: str = "PROTECTED_BY"
-    properties: CivoInstanceToFirewallRelProperties = (
-        CivoInstanceToFirewallRelProperties()
-    )
-
-
-@dataclass(frozen=True)
 class CivoInstanceToSSHKeyRelProperties(CartographyRelProperties):
     lastupdated: PropertyRef = PropertyRef("lastupdated", set_in_kwargs=True)
 
@@ -173,7 +131,15 @@ class CivoInstanceSchema(CartographyNodeSchema):
     the API that are real credentials or may embed user secrets:
     `initial_password`, `rescue_password`, `civostatsd_token` (all real
     credentials) and `script` (a user-supplied cloud-init script that commonly
-    embeds tokens/secrets at creation time)."""
+    embeds tokens/secrets at creation time).
+
+    `network_id`/`firewall_id` are kept as plain properties only in this PR -
+    not wired as `PART_OF_NETWORK`/`PROTECTED_BY` relationships, since
+    `CivoNetwork`/`CivoFirewall` are owned by the separate Networking PR and
+    don't exist on this branch. Those edges are added in a follow-up
+    cross-resource-relationships PR once every Civo resource PR has merged
+    (see .claude-workstreams/civo-pr-split-plan.md) - a relationship must not
+    target a node schema that doesn't exist yet on this PR's own branch."""
 
     label: str = "CivoInstance"
     properties: CivoInstanceNodeProperties = CivoInstanceNodeProperties()
@@ -181,8 +147,6 @@ class CivoInstanceSchema(CartographyNodeSchema):
     sub_resource_relationship: CivoInstanceToAccountRel = CivoInstanceToAccountRel()
     other_relationships: OtherRelationships = OtherRelationships(
         [
-            CivoInstanceToNetworkRel(),
-            CivoInstanceToFirewallRel(),
             CivoInstanceToSSHKeyRel(),
         ],
     )
