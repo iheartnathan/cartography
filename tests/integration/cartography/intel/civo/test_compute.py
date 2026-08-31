@@ -4,17 +4,28 @@ import requests
 
 import cartography.intel.civo
 import cartography.intel.civo.account
+import cartography.intel.civo.firewalls
 import cartography.intel.civo.instances
+import cartography.intel.civo.networks
 import cartography.intel.civo.sshkeys
 from tests.data.civo.account import QUOTA_RESPONSE
+from tests.data.civo.firewalls import FIREWALL_RULES_RESPONSE
+from tests.data.civo.firewalls import FIREWALLS_RESPONSE
+from tests.data.civo.firewalls import TEST_FIREWALL_ID
 from tests.data.civo.instances import INSTANCES_RESPONSE
 from tests.data.civo.instances import TEST_INSTANCE_ID
+from tests.data.civo.networks import NETWORKS_RESPONSE
+from tests.data.civo.networks import SUBNETS_RESPONSE
+from tests.data.civo.networks import TEST_NETWORK_ID
 from tests.integration.util import check_nodes
+from tests.integration.util import check_rels
 
 TEST_UPDATE_TAG = 123456789
 TEST_BASE_URL = "https://api.fake-civo.com"
 TEST_ACCOUNT_ID = QUOTA_RESPONSE["id"]
 TEST_REGION_CODE = "lon1"
+FIREWALLS_BY_REGION = [(firewall, TEST_REGION_CODE) for firewall in FIREWALLS_RESPONSE]
+NETWORKS_BY_REGION = [(network, TEST_REGION_CODE) for network in NETWORKS_RESPONSE]
 
 
 def _common_job_parameters() -> dict:
@@ -46,15 +57,48 @@ def _common_job_parameters() -> dict:
     return_value=INSTANCES_RESPONSE,
 )
 @patch.object(
+    cartography.intel.civo.firewalls,
+    "get_rules",
+    return_value=cartography.intel.civo.firewalls.transform_rules(
+        FIREWALL_RULES_RESPONSE,
+        TEST_FIREWALL_ID,
+    ),
+)
+@patch.object(
+    cartography.intel.civo.firewalls,
+    "get",
+    return_value=FIREWALLS_BY_REGION,
+)
+@patch.object(
+    cartography.intel.civo.networks,
+    "get_subnets",
+    return_value=cartography.intel.civo.networks.transform_subnets(
+        SUBNETS_RESPONSE,
+        TEST_NETWORK_ID,
+    ),
+)
+@patch.object(
+    cartography.intel.civo.networks,
+    "get",
+    return_value=NETWORKS_BY_REGION,
+)
+@patch.object(
     cartography.intel.civo.account,
     "get",
     return_value=QUOTA_RESPONSE,
 )
-def test_civo_instance_graph(mock_account_get, mock_instances_get, neo4j_session):
+def test_civo_instance_graph(
+    mock_account_get,
+    mock_networks_get,
+    mock_subnets_get,
+    mock_firewalls_get,
+    mock_rules_get,
+    mock_instances_get,
+    neo4j_session,
+):
     """
-    Sync only CivoInstance and verify its properties, ontology fields, and
-    secret exclusions. Cross-domain relationship resolution is covered by
-    the final relationship layer, which loads the matching target nodes too.
+    Verify instance properties and secret exclusions together with the
+    network and firewall relationships owned by the Compute layer.
     """
     # Arrange
     api_session = requests.Session()
@@ -65,6 +109,16 @@ def test_civo_instance_graph(mock_account_get, mock_instances_get, neo4j_session
         neo4j_session, api_session, common_job_parameters
     )
     common_job_parameters["ACCOUNT_ID"] = account["id"]
+    cartography.intel.civo.networks.sync(
+        neo4j_session,
+        api_session,
+        common_job_parameters,
+    )
+    cartography.intel.civo.firewalls.sync(
+        neo4j_session,
+        api_session,
+        common_job_parameters,
+    )
     cartography.intel.civo.instances.sync(
         neo4j_session, api_session, common_job_parameters
     )
@@ -100,3 +154,20 @@ def test_civo_instance_graph(mock_account_get, mock_instances_get, neo4j_session
         "ssh_key",
     ):
         assert secret_field not in all_instance_props
+
+    assert check_rels(
+        neo4j_session,
+        "CivoInstance",
+        "id",
+        "CivoNetwork",
+        "id",
+        "PART_OF_NETWORK",
+    ) == {(TEST_INSTANCE_ID, TEST_NETWORK_ID)}
+    assert check_rels(
+        neo4j_session,
+        "CivoInstance",
+        "id",
+        "CivoFirewall",
+        "id",
+        "PROTECTED_BY",
+    ) == {(TEST_INSTANCE_ID, TEST_FIREWALL_ID)}
