@@ -2,8 +2,11 @@ from unittest.mock import patch
 
 import requests
 
+import cartography.intel.civo
 import cartography.intel.civo.account
 import cartography.intel.civo.iam
+import cartography.intel.civo.sshkeys
+from cartography.config import Config
 from cartography.graph.job import GraphJob
 from cartography.models.civo.iam import CivoPermissionSchema
 from tests.data.civo.account import QUOTA_RESPONSE
@@ -281,4 +284,79 @@ def test_civo_iam_two_accounts_do_not_collide_on_cleanup(neo4j_session):
     neo4j_session.run(
         "MATCH (n:CivoPermission) WHERE n.id IN $ids DETACH DELETE n",
         ids=[f"{account_a}/*.*", f"{account_b}/*.*"],
+    )
+
+
+@patch.object(
+    cartography.intel.civo.iam,
+    "get_permissions",
+    return_value=PERMISSIONS_RESPONSE,
+)
+@patch.object(
+    cartography.intel.civo.iam,
+    "get_roles",
+    return_value=ROLES_RESPONSE,
+)
+@patch.object(
+    cartography.intel.civo.iam,
+    "get_team_members",
+    return_value=TEAM_MEMBERS_RESPONSE,
+)
+@patch.object(
+    cartography.intel.civo.iam,
+    "get_teams",
+    return_value=TEAMS_RESPONSE,
+)
+@patch.object(
+    cartography.intel.civo.sshkeys,
+    "get",
+    return_value=[],
+)
+@patch.object(
+    cartography.intel.civo.account,
+    "get",
+    return_value=QUOTA_RESPONSE,
+)
+def test_start_civo_ingestion_wires_iam_resources(
+    mock_account_get,
+    mock_sshkeys_get,
+    mock_teams_get,
+    mock_members_get,
+    mock_roles_get,
+    mock_permissions_get,
+    neo4j_session,
+):
+    """
+    Exercises the real entrypoint end-to-end for this PR's own resources,
+    unlike the tests above which call each module's sync()/cleanup()
+    directly. Catches wiring bugs a per-domain test can't: a missing
+    entrypoint import, a forgotten sync() call, or a merge-conflict
+    resolution that silently drops this PR's resources from __init__.py.
+    """
+    # Arrange
+    config = Config(
+        neo4j_uri="bolt://fake-neo4j:7687",
+        update_tag=TEST_UPDATE_TAG,
+        civo_api_key="fake-key",
+        civo_base_url=TEST_BASE_URL,
+    )
+
+    # Act
+    cartography.intel.civo.start_civo_ingestion(neo4j_session, config)
+
+    # Assert: this PR's resources loaded and linked to their account,
+    # proving the entrypoint actually wires this PR's sync() call.
+    assert check_nodes(neo4j_session, "CivoTeam", ["id"]) == {(TEST_TEAM_ID,)}
+    assert check_rels(
+        neo4j_session, "CivoAccount", "id", "CivoTeam", "id", "RESOURCE"
+    ) == {(TEST_ACCOUNT_ID, TEST_TEAM_ID)}
+
+    # Cleanup: this test's nodes would otherwise persist in the shared
+    # module-scoped test database and pollute other tests' exact-set
+    # assertions.
+    neo4j_session.run(
+        "MATCH (n:CivoAccount) WHERE n.id = $id DETACH DELETE n", id=TEST_ACCOUNT_ID
+    )
+    neo4j_session.run(
+        "MATCH (n) WHERE n:CivoTeam OR n:CivoTeamMember OR n:CivoRole OR n:CivoPermission DETACH DELETE n"
     )
