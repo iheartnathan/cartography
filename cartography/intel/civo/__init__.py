@@ -9,6 +9,7 @@ import cartography.intel.civo.account
 import cartography.intel.civo.databases
 import cartography.intel.civo.dns
 import cartography.intel.civo.firewalls
+import cartography.intel.civo.iam
 import cartography.intel.civo.instances
 import cartography.intel.civo.ips
 import cartography.intel.civo.kubernetes
@@ -82,6 +83,11 @@ def start_civo_ingestion(neo4j_session: neo4j.Session, config: Config) -> None:
         common_job_parameters,
     )
     cartography.intel.civo.dns.sync(
+        neo4j_session,
+        api_session,
+        common_job_parameters,
+    )
+    cartography.intel.civo.iam.sync(
         neo4j_session,
         api_session,
         common_job_parameters,
@@ -163,6 +169,7 @@ def start_civo_ingestion(neo4j_session: neo4j.Session, config: Config) -> None:
     cartography.intel.civo.instances.cleanup(neo4j_session, common_job_parameters)
     cartography.intel.civo.firewalls.cleanup(neo4j_session, common_job_parameters)
     cartography.intel.civo.networks.cleanup(neo4j_session, common_job_parameters)
+    cartography.intel.civo.iam.cleanup(neo4j_session, common_job_parameters)
     cartography.intel.civo.dns.cleanup(neo4j_session, common_job_parameters)
     cartography.intel.civo.sshkeys.cleanup(neo4j_session, common_job_parameters)
     # CivoAccountSchema has no relationships of its own (it's the root
