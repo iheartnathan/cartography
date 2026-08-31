@@ -81,11 +81,10 @@ class CivoVolumeSchema(CartographyNodeSchema):
     `PART_OF_NETWORK` relationships, since `CivoInstance`/
     `CivoKubernetesCluster`/`CivoNetwork` are owned by the separate
     Compute/Kubernetes/Networking PRs and don't exist on this branch.
-    Those edges are added in a follow-up cross-resource-relationships PR
-    once every Civo resource PR has merged (see
-    .claude-workstreams/civo-pr-split-plan.md) - a relationship must not
-    target a node schema that doesn't exist yet on this PR's own
-    branch."""
+    Those edges are added by the add-civo-cross-resource-relationships
+    PR, opened once every Civo resource PR has merged - a relationship
+    must not target a node schema that doesn't exist yet on this PR's
+    own branch."""
 
     label: str = "CivoVolume"
     properties: CivoVolumeNodeProperties = CivoVolumeNodeProperties()
