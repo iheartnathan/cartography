@@ -9,7 +9,7 @@ from cartography.graph.job import GraphJob
 from cartography.intel.civo.util import fan_out_paginated_across_regions
 from cartography.intel.civo.util import region_codes_for_feature
 from cartography.intel.civo.util import require_non_empty
-from cartography.models.civo.ip import CivoIPSchema
+from cartography.models.civo.reserved_ip_address import CivoReservedIPAddressSchema
 from cartography.util import timeit
 
 logger = logging.getLogger(__name__)
@@ -22,13 +22,13 @@ def sync(
     common_job_parameters: dict[str, Any],
 ) -> None:
     region_codes = region_codes_for_feature(common_job_parameters["REGIONS"], None)
-    ips = get(
+    reserved_ip_addresses = get(
         api_session,
         common_job_parameters["BASE_URL"],
         region_codes,
     )
-    transformed = transform_ips(ips)
-    load_ips(
+    transformed = transform_reserved_ip_addresses(reserved_ip_addresses)
+    load_reserved_ip_addresses(
         neo4j_session,
         transformed,
         common_job_parameters["ACCOUNT_ID"],
@@ -47,7 +47,9 @@ def get(
     )
 
 
-def transform_ips(ips: list[dict[str, Any]]) -> list[dict[str, Any]]:
+def transform_reserved_ip_addresses(
+    reserved_ip_addresses: list[dict[str, Any]],
+) -> list[dict[str, Any]]:
     """
     Flattens the polymorphic assigned_to object - Neo4j does not support
     nested map properties. `assigned_to.type` is one of `instance` or
@@ -56,8 +58,8 @@ def transform_ips(ips: list[dict[str, Any]]) -> list[dict[str, Any]]:
     relationship, instead of leaving the id generic and unlinkable.
     """
     result = []
-    for ip in ips:
-        ip_id = require_non_empty(ip.get("id"), "ip id")
+    for ip in reserved_ip_addresses:
+        ip_id = require_non_empty(ip.get("id"), "reserved ip address id")
         assigned_to = ip.get("assigned_to") or {}
         assigned_to_id = assigned_to.get("id") or None
         assigned_to_type = assigned_to.get("type") or None
@@ -82,7 +84,7 @@ def transform_ips(ips: list[dict[str, Any]]) -> list[dict[str, Any]]:
 
 
 @timeit
-def load_ips(
+def load_reserved_ip_addresses(
     neo4j_session: neo4j.Session,
     data: list[dict[str, Any]],
     account_id: str,
@@ -90,7 +92,7 @@ def load_ips(
 ) -> None:
     load(
         neo4j_session,
-        CivoIPSchema(),
+        CivoReservedIPAddressSchema(),
         data,
         lastupdated=update_tag,
         ACCOUNT_ID=account_id,
@@ -102,6 +104,6 @@ def cleanup(
     neo4j_session: neo4j.Session,
     common_job_parameters: dict[str, Any],
 ) -> None:
-    GraphJob.from_node_schema(CivoIPSchema(), common_job_parameters).run(
+    GraphJob.from_node_schema(CivoReservedIPAddressSchema(), common_job_parameters).run(
         neo4j_session,
     )

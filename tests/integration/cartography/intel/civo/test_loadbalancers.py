@@ -18,10 +18,10 @@ from tests.data.civo.firewalls import FIREWALLS_RESPONSE
 from tests.data.civo.firewalls import TEST_FIREWALL_ID
 from tests.data.civo.instances import INSTANCES_RESPONSE
 from tests.data.civo.instances import TEST_INSTANCE_ID
-from tests.data.civo.ips import IPS_PAGE
-from tests.data.civo.ips import TEST_IP_ID
-from tests.data.civo.ips import TEST_LB_IP_ID
-from tests.data.civo.ips import TEST_UNASSIGNED_IP_ID
+from tests.data.civo.ips import RESERVED_IPS_PAGE
+from tests.data.civo.ips import TEST_LB_RESERVED_IP_ID
+from tests.data.civo.ips import TEST_RESERVED_IP_ID
+from tests.data.civo.ips import TEST_UNASSIGNED_RESERVED_IP_ID
 from tests.data.civo.kubernetes import KUBERNETES_CLUSTERS_PAGE
 from tests.data.civo.kubernetes import TEST_CLUSTER_ID
 from tests.data.civo.loadbalancers import LOAD_BALANCERS_RESPONSE
@@ -67,7 +67,7 @@ def _common_job_parameters() -> dict:
 @patch.object(
     cartography.intel.civo.ips,
     "get",
-    return_value=IPS_PAGE["items"],
+    return_value=RESERVED_IPS_PAGE["items"],
 )
 @patch.object(
     cartography.intel.civo.loadbalancers,
@@ -115,7 +115,7 @@ def _common_job_parameters() -> dict:
     "get",
     return_value=QUOTA_RESPONSE,
 )
-def test_civo_loadbalancer_ip_graph(
+def test_civo_loadbalancer_reserved_ip_graph(
     mock_account_get,
     mock_networks_get,
     mock_subnets_get,
@@ -128,8 +128,8 @@ def test_civo_loadbalancer_ip_graph(
     neo4j_session,
 ):
     """
-    Verify the load-balancer/IP graph, including the cross-domain relationships
-    owned by the Load Balancers and IPs layer.
+    Verify the load-balancer/reserved-IP graph, including the cross-domain
+    relationships owned by the Load Balancers and Reserved IP Addresses layer.
     """
     # Arrange
     api_session = requests.Session()
@@ -234,20 +234,34 @@ def test_civo_loadbalancer_ip_graph(
         "PART_OF_NETWORK",
     ) == {(TEST_LOADBALANCER_ID, TEST_NETWORK_ID)}
 
-    # Assert: CivoIP loaded with assigned_to flattened.
-    assert check_nodes(neo4j_session, "CivoIP", ["id", "ip", "assigned_to_type"]) == {
-        (TEST_IP_ID, "74.220.16.30", "instance"),
-        (TEST_LB_IP_ID, "74.220.16.40", "loadbalancer"),
-        (TEST_UNASSIGNED_IP_ID, "74.220.16.50", None),
+    # Assert: CivoReservedIPAddress loaded with assigned_to flattened.
+    assert check_nodes(
+        neo4j_session,
+        "CivoReservedIPAddress",
+        ["id", "ip", "assigned_to_type"],
+    ) == {
+        (TEST_RESERVED_IP_ID, "74.220.16.30", "instance"),
+        (TEST_LB_RESERVED_IP_ID, "74.220.16.40", "loadbalancer"),
+        (TEST_UNASSIGNED_RESERVED_IP_ID, "74.220.16.50", None),
     }
 
     # Assert: each typed IP assignment resolves to the appropriate target.
     assert check_rels(
-        neo4j_session, "CivoIP", "id", "CivoLoadBalancer", "id", "ASSIGNED_TO"
-    ) == {(TEST_LB_IP_ID, TEST_LOADBALANCER_ID)}
+        neo4j_session,
+        "CivoReservedIPAddress",
+        "id",
+        "CivoLoadBalancer",
+        "id",
+        "ASSIGNED_TO",
+    ) == {(TEST_LB_RESERVED_IP_ID, TEST_LOADBALANCER_ID)}
     assert check_rels(
-        neo4j_session, "CivoIP", "id", "CivoInstance", "id", "ASSIGNED_TO"
-    ) == {(TEST_IP_ID, TEST_INSTANCE_ID)}
+        neo4j_session,
+        "CivoReservedIPAddress",
+        "id",
+        "CivoInstance",
+        "id",
+        "ASSIGNED_TO",
+    ) == {(TEST_RESERVED_IP_ID, TEST_INSTANCE_ID)}
 
     # Canonical PublicIP provenance is independent of workload assignment, so
     # the unassigned reserved address is linked to its Civo resource as well.
@@ -260,11 +274,11 @@ def test_civo_loadbalancer_ip_graph(
         neo4j_session,
         "PublicIP",
         "id",
-        "CivoIP",
+        "CivoReservedIPAddress",
         "id",
         "RESERVED_BY",
     ) == {
-        ("74.220.16.30", TEST_IP_ID),
-        ("74.220.16.40", TEST_LB_IP_ID),
-        ("74.220.16.50", TEST_UNASSIGNED_IP_ID),
+        ("74.220.16.30", TEST_RESERVED_IP_ID),
+        ("74.220.16.40", TEST_LB_RESERVED_IP_ID),
+        ("74.220.16.50", TEST_UNASSIGNED_RESERVED_IP_ID),
     }

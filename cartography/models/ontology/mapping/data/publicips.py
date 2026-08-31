@@ -106,7 +106,7 @@ civo_mapping = OntologyMapping(
     module_name="civo",
     nodes=[
         OntologyNodeMapping(
-            node_label="CivoIP",
+            node_label="CivoReservedIPAddress",
             fields=[
                 OntologyFieldMapping(
                     ontology_field="ip_address", node_field="ip", required=True

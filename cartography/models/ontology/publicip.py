@@ -117,10 +117,10 @@ class PublicIPToGCPNicAccessConfigRel(CartographyRelSchema):
     properties: PublicIPToNodeRelProperties = PublicIPToNodeRelProperties()
 
 
-# (:PublicIP)-[:RESERVED_BY]->(:CivoIP)
+# (:PublicIP)-[:RESERVED_BY]->(:CivoReservedIPAddress)
 @dataclass(frozen=True)
-class PublicIPToCivoIPRel(CartographyRelSchema):
-    target_node_label: str = "CivoIP"
+class PublicIPToCivoReservedIPAddressRel(CartographyRelSchema):
+    target_node_label: str = "CivoReservedIPAddress"
     target_node_matcher: TargetNodeMatcher = make_target_node_matcher(
         {"ip": PropertyRef("ip_address")},
     )
@@ -175,7 +175,7 @@ class PublicIPSchema(CartographyNodeSchema):
             PublicIPToScalewayFlexibleIpRel(),
             PublicIPToScalewayElasticMetalFlexibleIpRel(),
             PublicIPToGCPNicAccessConfigRel(),
-            PublicIPToCivoIPRel(),
+            PublicIPToCivoReservedIPAddressRel(),
             # POINTS_TO - Ontology semantic labels
             PublicIPToDeviceRel(),
             PublicIPToComputeInstanceRel(),

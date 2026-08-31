@@ -12,10 +12,16 @@ from cartography.models.core.relationships import TargetNodeMatcher
 
 
 @dataclass(frozen=True)
-class CivoIPNodeProperties(CartographyNodeProperties):
-    id: PropertyRef = PropertyRef("id", description="Civo reserved IP ID.")
+class CivoReservedIPAddressNodeProperties(CartographyNodeProperties):
+    id: PropertyRef = PropertyRef(
+        "id",
+        description="Civo reserved IP address ID.",
+    )
     lastupdated: PropertyRef = PropertyRef("lastupdated", set_in_kwargs=True)
-    name: PropertyRef = PropertyRef("name", description="Reserved IP name.")
+    name: PropertyRef = PropertyRef(
+        "name",
+        description="Reserved IP address name.",
+    )
     region: PropertyRef = PropertyRef(
         "region",
         extra_index=True,
@@ -43,16 +49,16 @@ class CivoIPNodeProperties(CartographyNodeProperties):
 
 
 @dataclass(frozen=True)
-class CivoIPToInstanceRelProperties(CartographyRelProperties):
+class CivoReservedIPAddressToInstanceRelProperties(CartographyRelProperties):
     lastupdated: PropertyRef = PropertyRef("lastupdated", set_in_kwargs=True)
 
 
 @dataclass(frozen=True)
-# (:CivoIP)-[:ASSIGNED_TO]->(:CivoInstance)
-class CivoIPToInstanceRel(CartographyRelSchema):
-    """Connects `CivoIP` to the `CivoInstance` it's assigned to, when
+# (:CivoReservedIPAddress)-[:ASSIGNED_TO]->(:CivoInstance)
+class CivoReservedIPAddressToInstanceRel(CartographyRelSchema):
+    """Connects `CivoReservedIPAddress` to the `CivoInstance` it's assigned to, when
     `assigned_to_type` is `instance`. Only ever one of this and
-    `CivoIPToLoadBalancerRel` resolves for a given IP, since Civo's
+    `CivoReservedIPAddressToLoadBalancerRel` resolves for a given IP, since Civo's
     `assigned_to` is polymorphic and the transform only ever populates one
     of `instance_id`/`loadbalancer_id`."""
 
@@ -62,19 +68,19 @@ class CivoIPToInstanceRel(CartographyRelSchema):
     )
     direction: LinkDirection = LinkDirection.OUTWARD
     rel_label: str = "ASSIGNED_TO"
-    properties: CivoIPToInstanceRelProperties = CivoIPToInstanceRelProperties()
+    properties: CivoReservedIPAddressToInstanceRelProperties = CivoReservedIPAddressToInstanceRelProperties()
 
 
 @dataclass(frozen=True)
-class CivoIPToLoadBalancerRelProperties(CartographyRelProperties):
+class CivoReservedIPAddressToLoadBalancerRelProperties(CartographyRelProperties):
     lastupdated: PropertyRef = PropertyRef("lastupdated", set_in_kwargs=True)
 
 
 @dataclass(frozen=True)
-# (:CivoIP)-[:ASSIGNED_TO]->(:CivoLoadBalancer)
-class CivoIPToLoadBalancerRel(CartographyRelSchema):
-    """Connects `CivoIP` to the `CivoLoadBalancer` it's assigned to, when
-    `assigned_to_type` is `loadbalancer`. See `CivoIPToInstanceRel`."""
+# (:CivoReservedIPAddress)-[:ASSIGNED_TO]->(:CivoLoadBalancer)
+class CivoReservedIPAddressToLoadBalancerRel(CartographyRelSchema):
+    """Connects `CivoReservedIPAddress` to the `CivoLoadBalancer` it's assigned to, when
+    `assigned_to_type` is `loadbalancer`. See `CivoReservedIPAddressToInstanceRel`."""
 
     target_node_label: str = "CivoLoadBalancer"
     target_node_matcher: TargetNodeMatcher = make_target_node_matcher(
@@ -82,18 +88,18 @@ class CivoIPToLoadBalancerRel(CartographyRelSchema):
     )
     direction: LinkDirection = LinkDirection.OUTWARD
     rel_label: str = "ASSIGNED_TO"
-    properties: CivoIPToLoadBalancerRelProperties = CivoIPToLoadBalancerRelProperties()
+    properties: CivoReservedIPAddressToLoadBalancerRelProperties = CivoReservedIPAddressToLoadBalancerRelProperties()
 
 
 @dataclass(frozen=True)
-class CivoIPToAccountRelProperties(CartographyRelProperties):
+class CivoReservedIPAddressToAccountRelProperties(CartographyRelProperties):
     lastupdated: PropertyRef = PropertyRef("lastupdated", set_in_kwargs=True)
 
 
 @dataclass(frozen=True)
-# (:CivoAccount)-[:RESOURCE]->(:CivoIP)
-class CivoIPToAccountRel(CartographyRelSchema):
-    """Connects `CivoAccount` to `CivoIP` through `RESOURCE`."""
+# (:CivoAccount)-[:RESOURCE]->(:CivoReservedIPAddress)
+class CivoReservedIPAddressToAccountRel(CartographyRelSchema):
+    """Connects `CivoAccount` to `CivoReservedIPAddress` through `RESOURCE`."""
 
     target_node_label: str = "CivoAccount"
     target_node_matcher: TargetNodeMatcher = make_target_node_matcher(
@@ -101,11 +107,11 @@ class CivoIPToAccountRel(CartographyRelSchema):
     )
     direction: LinkDirection = LinkDirection.INWARD
     rel_label: str = "RESOURCE"
-    properties: CivoIPToAccountRelProperties = CivoIPToAccountRelProperties()
+    properties: CivoReservedIPAddressToAccountRelProperties = CivoReservedIPAddressToAccountRelProperties()
 
 
 @dataclass(frozen=True)
-class CivoIPSchema(CartographyNodeSchema):
+class CivoReservedIPAddressSchema(CartographyNodeSchema):
     """A Civo reserved (floating) IP address. `assigned_to` is polymorphic
     (an instance or a load balancer) - the transform splits it into
     `instance_id`/`loadbalancer_id` (only one populated per row, per
@@ -113,9 +119,9 @@ class CivoIPSchema(CartographyNodeSchema):
     relationship below, alongside the flat id/type/name fields kept for
     display."""
 
-    label: str = "CivoIP"
-    properties: CivoIPNodeProperties = CivoIPNodeProperties()
-    sub_resource_relationship: CivoIPToAccountRel = CivoIPToAccountRel()
+    label: str = "CivoReservedIPAddress"
+    properties: CivoReservedIPAddressNodeProperties = CivoReservedIPAddressNodeProperties()
+    sub_resource_relationship: CivoReservedIPAddressToAccountRel = CivoReservedIPAddressToAccountRel()
     other_relationships: OtherRelationships = OtherRelationships(
-        [CivoIPToInstanceRel(), CivoIPToLoadBalancerRel()],
+        [CivoReservedIPAddressToInstanceRel(), CivoReservedIPAddressToLoadBalancerRel()],
     )
