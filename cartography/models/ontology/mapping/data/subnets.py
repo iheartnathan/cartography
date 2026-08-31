@@ -98,9 +98,30 @@ scaleway_mapping = OntologyMapping(
     ],
 )
 
+civo_mapping = OntologyMapping(
+    module_name="civo",
+    nodes=[
+        OntologyNodeMapping(
+            node_label="CivoSubnet",
+            fields=[
+                OntologyFieldMapping(
+                    ontology_field="name", node_field="name", required=True
+                ),
+                # _ont_cidr_block: not mapped. Civo's subnet object carries no
+                # CIDR of its own (confirmed live - civogo's `subnet_size`
+                # field wasn't even populated on a real subnet).
+                # _ont_availability_zone / _ont_region: not mapped. Civo
+                # subnets carry no region/zone of their own; that lives on
+                # the parent CivoNetwork.
+            ],
+        ),
+    ],
+)
+
 SUBNETS_ONTOLOGY_MAPPING: dict[str, OntologyMapping] = {
     "aws": aws_mapping,
     "gcp": gcp_mapping,
     "azure": azure_mapping,
     "scaleway": scaleway_mapping,
+    "civo": civo_mapping,
 }

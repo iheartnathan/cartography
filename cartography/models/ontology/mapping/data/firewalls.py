@@ -140,6 +140,23 @@ snowflake_mapping = OntologyMapping(
     ],
 )
 
+civo_mapping = OntologyMapping(
+    module_name="civo",
+    nodes=[
+        OntologyNodeMapping(
+            node_label="CivoFirewall",
+            fields=[
+                OntologyFieldMapping(
+                    ontology_field="name", node_field="name", required=True
+                ),
+                # direction: not applicable. Like AWS/Azure/GCP security-group
+                # equivalents, a CivoFirewall is a bidirectional container of
+                # rules; direction lives on the individual CivoFirewallRule.
+            ],
+        ),
+    ],
+)
+
 FIREWALLS_ONTOLOGY_MAPPING: dict[str, OntologyMapping] = {
     "aws": aws_mapping,
     "gcp": gcp_mapping,
@@ -147,4 +164,5 @@ FIREWALLS_ONTOLOGY_MAPPING: dict[str, OntologyMapping] = {
     "databricks": databricks_mapping,
     "cloudflare": cloudflare_mapping,
     "snowflake": snowflake_mapping,
+    "civo": civo_mapping,
 }
