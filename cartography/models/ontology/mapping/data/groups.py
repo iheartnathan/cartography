@@ -390,8 +390,24 @@ salesforce_mapping = OntologyMapping(
     ],
 )
 
+civo_mapping = OntologyMapping(
+    module_name="civo",
+    nodes=[
+        OntologyNodeMapping(
+            node_label="CivoTeam",
+            fields=[
+                OntologyFieldMapping(
+                    ontology_field="name", node_field="name", required=True
+                ),
+                # description / email: not exposed by Civo's team API.
+            ],
+        ),
+    ],
+)
+
 GROUPS_ONTOLOGY_MAPPING: dict[str, OntologyMapping] = {
     "aws": aws_mapping,
+    "civo": civo_mapping,
     "circleci": circleci_mapping,
     "salesforce": salesforce_mapping,
     "duo": duo_mapping,

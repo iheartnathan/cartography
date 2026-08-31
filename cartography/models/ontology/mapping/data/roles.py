@@ -422,8 +422,34 @@ huntress_mapping = OntologyMapping(
     ],
 )
 
+civo_mapping = OntologyMapping(
+    module_name="civo",
+    nodes=[
+        OntologyNodeMapping(
+            node_label="CivoRole",
+            fields=[
+                OntologyFieldMapping(
+                    ontology_field="name", node_field="name", required=True
+                ),
+                OntologyFieldMapping(ontology_field="type", node_field="role_type"),
+                # scope: Civo roles are listed per-account, and the built-in
+                # roles returned carry an empty organisation_id/account_id
+                # (confirmed live), so "account" is the closest honest fit
+                # to the canonical scope set.
+                OntologyFieldMapping(
+                    ontology_field="scope",
+                    node_field="",
+                    special_handling="static_value",
+                    extra={"value": "account"},
+                ),
+            ],
+        ),
+    ],
+)
+
 ROLES_ONTOLOGY_MAPPING: dict[str, OntologyMapping] = {
     "aws": aws_mapping,
+    "civo": civo_mapping,
     "huntress": huntress_mapping,
     "azure": azure_mapping,
     "gcp": gcp_mapping,
