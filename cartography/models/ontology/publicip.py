@@ -117,6 +117,18 @@ class PublicIPToGCPNicAccessConfigRel(CartographyRelSchema):
     properties: PublicIPToNodeRelProperties = PublicIPToNodeRelProperties()
 
 
+# (:PublicIP)-[:RESERVED_BY]->(:CivoIP)
+@dataclass(frozen=True)
+class PublicIPToCivoIPRel(CartographyRelSchema):
+    target_node_label: str = "CivoIP"
+    target_node_matcher: TargetNodeMatcher = make_target_node_matcher(
+        {"ip": PropertyRef("ip_address")},
+    )
+    direction: LinkDirection = LinkDirection.OUTWARD
+    rel_label: str = "RESERVED_BY"
+    properties: PublicIPToNodeRelProperties = PublicIPToNodeRelProperties()
+
+
 # =============================================================================
 # POINTS_TO relations - Link PublicIP to ontology semantic labels
 # These use the standardized _ont_* fields from the ontology mappings
@@ -163,6 +175,7 @@ class PublicIPSchema(CartographyNodeSchema):
             PublicIPToScalewayFlexibleIpRel(),
             PublicIPToScalewayElasticMetalFlexibleIpRel(),
             PublicIPToGCPNicAccessConfigRel(),
+            PublicIPToCivoIPRel(),
             # POINTS_TO - Ontology semantic labels
             PublicIPToDeviceRel(),
             PublicIPToComputeInstanceRel(),

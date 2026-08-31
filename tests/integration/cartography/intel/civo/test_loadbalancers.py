@@ -11,6 +11,7 @@ import cartography.intel.civo.kubernetes
 import cartography.intel.civo.loadbalancers
 import cartography.intel.civo.networks
 import cartography.intel.civo.sshkeys
+import cartography.intel.ontology.publicips
 from tests.data.civo.account import QUOTA_RESPONSE
 from tests.data.civo.firewalls import FIREWALL_RULES_RESPONSE
 from tests.data.civo.firewalls import FIREWALLS_RESPONSE
@@ -20,6 +21,7 @@ from tests.data.civo.instances import TEST_INSTANCE_ID
 from tests.data.civo.ips import IPS_PAGE
 from tests.data.civo.ips import TEST_IP_ID
 from tests.data.civo.ips import TEST_LB_IP_ID
+from tests.data.civo.ips import TEST_UNASSIGNED_IP_ID
 from tests.data.civo.kubernetes import KUBERNETES_CLUSTERS_PAGE
 from tests.data.civo.kubernetes import TEST_CLUSTER_ID
 from tests.data.civo.loadbalancers import LOAD_BALANCERS_RESPONSE
@@ -154,6 +156,11 @@ def test_civo_loadbalancer_ip_graph(
         neo4j_session, api_session, common_job_parameters
     )
     cartography.intel.civo.ips.sync(neo4j_session, api_session, common_job_parameters)
+    cartography.intel.ontology.publicips.sync(
+        neo4j_session,
+        TEST_UPDATE_TAG,
+        common_job_parameters,
+    )
 
     # Assert: CivoLoadBalancerBackend loaded, linked to its CivoLoadBalancer.
     backend_id = f"{TEST_LOADBALANCER_ID}/{TEST_INSTANCE_PRIVATE_IP}/http/80/8080"
@@ -231,6 +238,7 @@ def test_civo_loadbalancer_ip_graph(
     assert check_nodes(neo4j_session, "CivoIP", ["id", "ip", "assigned_to_type"]) == {
         (TEST_IP_ID, "74.220.16.30", "instance"),
         (TEST_LB_IP_ID, "74.220.16.40", "loadbalancer"),
+        (TEST_UNASSIGNED_IP_ID, "74.220.16.50", None),
     }
 
     # Assert: each typed IP assignment resolves to the appropriate target.
@@ -240,3 +248,23 @@ def test_civo_loadbalancer_ip_graph(
     assert check_rels(
         neo4j_session, "CivoIP", "id", "CivoInstance", "id", "ASSIGNED_TO"
     ) == {(TEST_IP_ID, TEST_INSTANCE_ID)}
+
+    # Canonical PublicIP provenance is independent of workload assignment, so
+    # the unassigned reserved address is linked to its Civo resource as well.
+    assert check_nodes(neo4j_session, "PublicIP", ["id"]) == {
+        ("74.220.16.30",),
+        ("74.220.16.40",),
+        ("74.220.16.50",),
+    }
+    assert check_rels(
+        neo4j_session,
+        "PublicIP",
+        "id",
+        "CivoIP",
+        "id",
+        "RESERVED_BY",
+    ) == {
+        ("74.220.16.30", TEST_IP_ID),
+        ("74.220.16.40", TEST_LB_IP_ID),
+        ("74.220.16.50", TEST_UNASSIGNED_IP_ID),
+    }
