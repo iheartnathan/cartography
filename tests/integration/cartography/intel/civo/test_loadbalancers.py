@@ -65,15 +65,9 @@ def test_civo_loadbalancer_ip_graph(
     mock_account_get, mock_loadbalancers_get, mock_ips_get, neo4j_session
 ):
     """
-    CivoLoadBalancer/CivoIP loaded standalone. firewall_id/cluster_id/
-    network_id are kept as plain properties only in this PR, not wired as
-    PROTECTED_BY/EXPOSES/PART_OF_NETWORK relationships (and
-    CivoLoadBalancerBackend's ROUTES_TO / CivoIP's instance-typed
-    ASSIGNED_TO aren't wired either) - CivoFirewall/CivoKubernetesCluster/
-    CivoNetwork/CivoInstance are owned by the separate Networking/
-    Kubernetes/Compute PRs and don't exist on this branch. Those edges are
-    added in a follow-up cross-resource-relationships PR once every Civo
-    resource PR has merged (see the PR split plan).
+    Sync only the load-balancer/IP domain and verify its internal graph and
+    typed assignment behavior. Cross-domain relationship resolution is covered
+    by the final relationship layer with matching target nodes loaded.
     """
     # Arrange
     api_session = requests.Session()
@@ -136,8 +130,8 @@ def test_civo_loadbalancer_ip_graph(
     }
 
     # Assert: the loadbalancer-assigned IP resolves its typed ASSIGNED_TO
-    # relationship (the instance-assigned IP can't - no CivoInstance node in
-    # this PR).
+    # relationship. This domain-only test does not load a matching instance,
+    # so the instance-assigned IP remains unresolved here.
     assert check_rels(
         neo4j_session, "CivoIP", "id", "CivoLoadBalancer", "id", "ASSIGNED_TO"
     ) == {(TEST_LB_IP_ID, TEST_LOADBALANCER_ID)}
