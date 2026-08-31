@@ -463,6 +463,29 @@ netlify_mapping = OntologyMapping(
     ],
 )
 
+civo_mapping = OntologyMapping(
+    module_name="civo",
+    nodes=[
+        OntologyNodeMapping(
+            node_label="CivoDatabase",
+            fields=[
+                OntologyFieldMapping(
+                    ontology_field="name", node_field="name", required=True
+                ),
+                OntologyFieldMapping(ontology_field="type", node_field="software"),
+                OntologyFieldMapping(
+                    ontology_field="version", node_field="software_version"
+                ),
+                OntologyFieldMapping(
+                    ontology_field="endpoint", node_field="public_ipv4"
+                ),
+                OntologyFieldMapping(ontology_field="port", node_field="port"),
+                OntologyFieldMapping(ontology_field="location", node_field="region"),
+            ],
+        ),
+    ],
+)
+
 DATABASES_ONTOLOGY_MAPPING: dict[str, OntologyMapping] = {
     "aws": aws_mapping,
     "azure": azure_mapping,
@@ -471,6 +494,7 @@ DATABASES_ONTOLOGY_MAPPING: dict[str, OntologyMapping] = {
     "databricks": databricks_mapping,
     "supabase": supabase_mapping,
     "netlify": netlify_mapping,
+    "civo": civo_mapping,
     "snowflake": OntologyMapping(
         module_name="snowflake",
         nodes=[
