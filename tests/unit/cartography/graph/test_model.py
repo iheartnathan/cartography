@@ -30,17 +30,6 @@ RELATION_ONLY_NODE_LABELS: Set[str] = {
     "GCPResource",
     "OktaGroup",
     "OktaUser",
-    # Temporary, PR-split-specific: this Civo resource PR (see
-    # .claude-workstreams/civo-pr-split-plan.md) is fanned out from
-    # add-civo-intel-foundation and does not itself contain the sibling
-    # Civo Networking/Compute/Kubernetes PRs' node schemas. Its own
-    # relationship matchers reference those labels and simply won't
-    # resolve until all are present in the same sync (documented
-    # behavior, not a bug). Remove these entries once all Civo resource
-    # PRs have merged to master together.
-    "CivoNetwork",
-    "CivoInstance",
-    "CivoKubernetesCluster",
 }
 
 PROVIDER_PREFIX_EXCEPTIONS: Dict[str, Set[str]] = {
