@@ -16,7 +16,14 @@ from tests.data.civo.account import QUOTA_RESPONSE
 from tests.data.civo.firewalls import FIREWALL_RULES_RESPONSE
 from tests.data.civo.firewalls import FIREWALLS_RESPONSE
 from tests.data.civo.firewalls import TEST_FIREWALL_ID
+from tests.data.civo.instances import (
+    DECOY_INSTANCE_SAME_PRIVATE_IP_AND_NETWORK_DIFFERENT_ACCOUNT,
+)
+from tests.data.civo.instances import DECOY_INSTANCE_SAME_PRIVATE_IP_DIFFERENT_NETWORK
 from tests.data.civo.instances import INSTANCES_RESPONSE
+from tests.data.civo.instances import TEST_DECOY_ACCOUNT_ID
+from tests.data.civo.instances import TEST_DECOY_ACCOUNT_INSTANCE_ID
+from tests.data.civo.instances import TEST_DECOY_INSTANCE_ID
 from tests.data.civo.instances import TEST_INSTANCE_ID
 from tests.data.civo.ips import RESERVED_IPS_PAGE
 from tests.data.civo.ips import TEST_LB_RESERVED_IP_ID
@@ -82,7 +89,10 @@ def _common_job_parameters() -> dict:
 @patch.object(
     cartography.intel.civo.instances,
     "get",
-    return_value=INSTANCES_RESPONSE,
+    return_value=[
+        *INSTANCES_RESPONSE,
+        DECOY_INSTANCE_SAME_PRIVATE_IP_DIFFERENT_NETWORK,
+    ],
 )
 @patch.object(
     cartography.intel.civo.firewalls,
@@ -147,6 +157,19 @@ def test_civo_loadbalancer_reserved_ip_graph(
     cartography.intel.civo.instances.sync(
         neo4j_session, api_session, common_job_parameters
     )
+    cartography.intel.civo.account.load_accounts(
+        neo4j_session,
+        [{**QUOTA_RESPONSE, "id": TEST_DECOY_ACCOUNT_ID}],
+        TEST_UPDATE_TAG,
+    )
+    cartography.intel.civo.instances.load_instances(
+        neo4j_session,
+        cartography.intel.civo.instances.transform_instances(
+            [DECOY_INSTANCE_SAME_PRIVATE_IP_AND_NETWORK_DIFFERENT_ACCOUNT],
+        ),
+        TEST_DECOY_ACCOUNT_ID,
+        TEST_UPDATE_TAG,
+    )
     cartography.intel.civo.kubernetes.sync(
         neo4j_session, api_session, common_job_parameters
     )
@@ -175,6 +198,11 @@ def test_civo_loadbalancer_reserved_ip_graph(
         "id",
         "HAS_BACKEND",
     ) == {(TEST_LOADBALANCER_ID, backend_id)}
+    assert check_nodes(neo4j_session, "CivoInstance", ["id"]) == {
+        (TEST_INSTANCE_ID,),
+        (TEST_DECOY_INSTANCE_ID,),
+        (TEST_DECOY_ACCOUNT_INSTANCE_ID,),
+    }
     assert check_rels(
         neo4j_session,
         "CivoLoadBalancerBackend",
