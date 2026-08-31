@@ -2,8 +2,10 @@ from unittest.mock import patch
 
 import requests
 
+import cartography.intel.civo
 import cartography.intel.civo.account
 import cartography.intel.civo.sshkeys
+from cartography.config import Config
 from tests.data.civo.account import QUOTA_RESPONSE
 from tests.data.civo.sshkeys import SSH_KEYS_RESPONSE
 from tests.integration.util import check_nodes
@@ -153,3 +155,81 @@ def test_civo_sshkey_cleanup_removes_stale_keys(
     assert check_nodes(neo4j_session, "CivoSSHKey", ["id"]) == {
         (SSH_KEYS_RESPONSE[0]["id"],),
     }
+
+
+@patch.object(
+    cartography.intel.civo.sshkeys,
+    "get",
+    return_value=SSH_KEYS_RESPONSE,
+)
+@patch.object(
+    cartography.intel.civo.account,
+    "get",
+    return_value=QUOTA_RESPONSE,
+)
+def test_start_civo_ingestion_wires_foundation_resources(
+    mock_account_get, mock_sshkeys_get, neo4j_session
+):
+    """
+    Exercises the real entrypoint end-to-end for this PR's own resources
+    (region fetch/config-gating included), unlike the tests above which
+    call each module's sync()/cleanup() directly. Catches wiring bugs a
+    per-domain sync()-only test can't: a missing entrypoint import, a
+    forgotten sync() call, or a merge-conflict resolution that silently
+    drops this PR's resource from __init__.py.
+    """
+    # Arrange
+    config = Config(
+        neo4j_uri="bolt://fake-neo4j:7687",
+        update_tag=TEST_UPDATE_TAG,
+        civo_api_key="fake-key",
+        civo_base_url=TEST_BASE_URL,
+    )
+
+    # Act
+    cartography.intel.civo.start_civo_ingestion(neo4j_session, config)
+
+    # Assert: CivoAccount and CivoSSHKey - this PR's only resources - both
+    # loaded and linked, proving the entrypoint actually wires this PR's
+    # sync() calls, not just that sync() works when called directly.
+    assert check_nodes(neo4j_session, "CivoAccount", ["id"]) == {(TEST_ACCOUNT_ID,)}
+    assert check_nodes(neo4j_session, "CivoSSHKey", ["id"]) == {
+        (key["id"],) for key in SSH_KEYS_RESPONSE
+    }
+    assert check_rels(
+        neo4j_session,
+        "CivoSSHKey",
+        "id",
+        "CivoAccount",
+        "id",
+        "RESOURCE",
+        rel_direction_right=False,
+    ) == {(key["id"], TEST_ACCOUNT_ID) for key in SSH_KEYS_RESPONSE}
+
+    # Cleanup: this test's nodes would otherwise persist in the shared
+    # module-scoped test database and pollute the next test's exact-set
+    # (empty) assertion.
+    neo4j_session.run(
+        "MATCH (n:CivoAccount) WHERE n.id = $id DETACH DELETE n", id=TEST_ACCOUNT_ID
+    )
+    neo4j_session.run(
+        "MATCH (n:CivoSSHKey) WHERE n.id IN $ids DETACH DELETE n",
+        ids=[key["id"] for key in SSH_KEYS_RESPONSE],
+    )
+
+
+def test_start_civo_ingestion_skips_when_unconfigured(neo4j_session):
+    # Arrange: no civo_api_key - the entrypoint must skip entirely, not
+    # raise or make any API call.
+    config = Config(
+        neo4j_uri="bolt://fake-neo4j:7687",
+        update_tag=TEST_UPDATE_TAG,
+        civo_api_key=None,
+        civo_base_url=TEST_BASE_URL,
+    )
+
+    # Act
+    cartography.intel.civo.start_civo_ingestion(neo4j_session, config)
+
+    # Assert: nothing was loaded.
+    assert check_nodes(neo4j_session, "CivoAccount", ["id"]) == set()

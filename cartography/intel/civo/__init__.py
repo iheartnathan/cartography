@@ -8,7 +8,6 @@ from urllib3 import Retry
 import cartography.intel.civo.account
 import cartography.intel.civo.sshkeys
 from cartography.config import Config
-from cartography.intel.civo.util import get_regions
 from cartography.util import timeit
 
 logger = logging.getLogger(__name__)
@@ -52,22 +51,20 @@ def start_civo_ingestion(neo4j_session: neo4j.Session, config: Config) -> None:
     )
     common_job_parameters["ACCOUNT_ID"] = account["id"]
 
-    # Most Civo list endpoints are region-scoped: some require `region`,
-    # others silently default to one *random* region if it's omitted
-    # (confirmed against Civo's own API docs). Fetch every region once here -
-    # full objects, not just codes, since each carries a `features` map
-    # saying which products it actually supports - and let each regional
-    # module filter to the regions relevant to it. SSH keys are the only
-    # genuinely global (non-regional) resource in this foundation PR.
-    common_job_parameters["REGIONS"] = get_regions(
-        api_session, common_job_parameters["BASE_URL"]
-    )
-
     # Phase 2: Account-scoped resources. Each follow-up Civo resource PR adds
-    # its own sync() call here, after this foundation PR merges. Networks and
-    # ssh keys load early since firewalls/instances reference them by id in
-    # relationship matchers (a matcher only resolves once the target node
-    # already exists in the graph).
+    # its own sync() call here, after this foundation PR merges. Neither of
+    # this foundation PR's own resources (CivoAccount, CivoSSHKey) is
+    # region-scoped, so REGIONS is deliberately not fetched here - a
+    # regional resource's own PR is responsible for populating
+    # common_job_parameters["REGIONS"] (via the shared get_regions() helper
+    # in cartography.intel.civo.util) immediately before its own sync()
+    # call, guarded by `if "REGIONS" not in common_job_parameters` so it's
+    # fetched at most once regardless of merge order among regional PRs.
+    # This keeps a malformed/unavailable /v2/regions response from blocking
+    # ingestion of resources that never needed it in the first place (e.g.
+    # CivoAccount, CivoSSHKey, CivoDNSDomain/Record, CivoTeam/Role/
+    # Permission - none of Civo's account, ssh key, DNS, or IAM endpoints
+    # are region-scoped).
     cartography.intel.civo.sshkeys.sync(
         neo4j_session,
         api_session,
