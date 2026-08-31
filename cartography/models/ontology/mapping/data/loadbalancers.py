@@ -136,9 +136,32 @@ scaleway_mapping = OntologyMapping(
     ],
 )
 
+civo_mapping = OntologyMapping(
+    module_name="civo",
+    nodes=[
+        OntologyNodeMapping(
+            node_label="CivoLoadBalancer",
+            fields=[
+                OntologyFieldMapping(
+                    ontology_field="name", node_field="name", required=True
+                ),
+                # lb_type / scheme: Civo load balancers are always public-facing,
+                # single-type - no equivalent field to map.
+                # dns_name: Civo load balancers are addressed by IP, not a
+                # DNS name - use ip_address instead.
+                OntologyFieldMapping(
+                    ontology_field="ip_address", node_field="public_ip"
+                ),
+                OntologyFieldMapping(ontology_field="region", node_field="region"),
+            ],
+        ),
+    ],
+)
+
 LOADBALANCERS_ONTOLOGY_MAPPING: dict[str, OntologyMapping] = {
     "aws": aws_mapping,
     "gcp": gcp_mapping,
     "azure": azure_mapping,
     "scaleway": scaleway_mapping,
+    "civo": civo_mapping,
 }

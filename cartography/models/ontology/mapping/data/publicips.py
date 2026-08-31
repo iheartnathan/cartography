@@ -102,10 +102,25 @@ bbot_mapping = OntologyMapping(
 # directly in the PublicIP schema model (publicip.py)
 # =============================================================================
 
+civo_mapping = OntologyMapping(
+    module_name="civo",
+    nodes=[
+        OntologyNodeMapping(
+            node_label="CivoIP",
+            fields=[
+                OntologyFieldMapping(
+                    ontology_field="ip_address", node_field="ip", required=True
+                ),
+            ],
+        ),
+    ],
+)
+
 PUBLIC_IPS_ONTOLOGY_MAPPING: dict[str, OntologyMapping] = {
     "aws": aws_eip_mapping,
     "azure": azure_pip_mapping,
     "bbot": bbot_mapping,
     "gcp": gcp_mapping,
     "scaleway": scaleway_fip_mapping,
+    "civo": civo_mapping,
 }
