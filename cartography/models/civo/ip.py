@@ -43,6 +43,29 @@ class CivoIPNodeProperties(CartographyNodeProperties):
 
 
 @dataclass(frozen=True)
+class CivoIPToInstanceRelProperties(CartographyRelProperties):
+    lastupdated: PropertyRef = PropertyRef("lastupdated", set_in_kwargs=True)
+
+
+@dataclass(frozen=True)
+# (:CivoIP)-[:ASSIGNED_TO]->(:CivoInstance)
+class CivoIPToInstanceRel(CartographyRelSchema):
+    """Connects `CivoIP` to the `CivoInstance` it's assigned to, when
+    `assigned_to_type` is `instance`. Only ever one of this and
+    `CivoIPToLoadBalancerRel` resolves for a given IP, since Civo's
+    `assigned_to` is polymorphic and the transform only ever populates one
+    of `instance_id`/`loadbalancer_id`."""
+
+    target_node_label: str = "CivoInstance"
+    target_node_matcher: TargetNodeMatcher = make_target_node_matcher(
+        {"id": PropertyRef("instance_id")},
+    )
+    direction: LinkDirection = LinkDirection.OUTWARD
+    rel_label: str = "ASSIGNED_TO"
+    properties: CivoIPToInstanceRelProperties = CivoIPToInstanceRelProperties()
+
+
+@dataclass(frozen=True)
 class CivoIPToLoadBalancerRelProperties(CartographyRelProperties):
     lastupdated: PropertyRef = PropertyRef("lastupdated", set_in_kwargs=True)
 
@@ -51,12 +74,7 @@ class CivoIPToLoadBalancerRelProperties(CartographyRelProperties):
 # (:CivoIP)-[:ASSIGNED_TO]->(:CivoLoadBalancer)
 class CivoIPToLoadBalancerRel(CartographyRelSchema):
     """Connects `CivoIP` to the `CivoLoadBalancer` it's assigned to, when
-    `assigned_to_type` is `loadbalancer`. Civo's `assigned_to` is also
-    polymorphic to `instance` - not wired as a `CivoInstance` relationship
-    here, since `CivoInstance` is owned by the separate Compute PR and
-    doesn't exist on this branch. That edge is added by the
-    add-civo-cross-resource-relationships PR, opened once every Civo
-    resource PR has merged."""
+    `assigned_to_type` is `loadbalancer`. See `CivoIPToInstanceRel`."""
 
     target_node_label: str = "CivoLoadBalancer"
     target_node_matcher: TargetNodeMatcher = make_target_node_matcher(
@@ -99,5 +117,5 @@ class CivoIPSchema(CartographyNodeSchema):
     properties: CivoIPNodeProperties = CivoIPNodeProperties()
     sub_resource_relationship: CivoIPToAccountRel = CivoIPToAccountRel()
     other_relationships: OtherRelationships = OtherRelationships(
-        [CivoIPToLoadBalancerRel()],
+        [CivoIPToInstanceRel(), CivoIPToLoadBalancerRel()],
     )
