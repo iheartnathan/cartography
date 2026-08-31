@@ -145,8 +145,14 @@ civo_mapping = OntologyMapping(
                 OntologyFieldMapping(
                     ontology_field="name", node_field="name", required=True
                 ),
-                # lb_type / scheme: Civo load balancers are always public-facing,
-                # single-type - no equivalent field to map.
+                # lb_type: Civo load balancers are single-type - no equivalent
+                # field to map.
+                OntologyFieldMapping(
+                    ontology_field="scheme",
+                    node_field="",
+                    special_handling="static_value",
+                    extra={"value": "internet_facing"},
+                ),
                 # dns_name: Civo load balancers are addressed by IP, not a
                 # DNS name - use ip_address instead.
                 OntologyFieldMapping(

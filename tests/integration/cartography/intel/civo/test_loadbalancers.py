@@ -230,12 +230,14 @@ def test_civo_loadbalancer_reserved_ip_graph(
         "HAS_INSTANCE_POOL",
     ) == {(TEST_LOADBALANCER_ID, pool_id)}
 
-    # Assert: CivoLoadBalancer loaded, with the ontology's ip_address field
-    # correctly populated from public_ip.
+    # Assert: CivoLoadBalancer loaded, with the ontology's ip_address and
+    # scheme fields correctly populated.
     assert check_nodes(
-        neo4j_session, "CivoLoadBalancer", ["id", "name", "_ont_ip_address"]
+        neo4j_session,
+        "CivoLoadBalancer",
+        ["id", "name", "_ont_ip_address", "_ont_scheme"],
     ) == {
-        (TEST_LOADBALANCER_ID, "prod-lb", "74.220.16.20"),
+        (TEST_LOADBALANCER_ID, "prod-lb", "74.220.16.20", "internet_facing"),
     }
     assert check_rels(
         neo4j_session,
