@@ -79,84 +79,25 @@ class CivoLoadBalancerToAccountRel(CartographyRelSchema):
 
 
 @dataclass(frozen=True)
-class CivoLoadBalancerToFirewallRelProperties(CartographyRelProperties):
-    lastupdated: PropertyRef = PropertyRef("lastupdated", set_in_kwargs=True)
-
-
-@dataclass(frozen=True)
-# (:CivoLoadBalancer)-[:PROTECTED_BY]->(:CivoFirewall)
-class CivoLoadBalancerToFirewallRel(CartographyRelSchema):
-    """Connects `CivoLoadBalancer` to the `CivoFirewall` protecting it."""
-
-    target_node_label: str = "CivoFirewall"
-    target_node_matcher: TargetNodeMatcher = make_target_node_matcher(
-        {"id": PropertyRef("firewall_id")},
-    )
-    direction: LinkDirection = LinkDirection.OUTWARD
-    rel_label: str = "PROTECTED_BY"
-    properties: CivoLoadBalancerToFirewallRelProperties = (
-        CivoLoadBalancerToFirewallRelProperties()
-    )
-
-
-@dataclass(frozen=True)
-class CivoLoadBalancerToClusterRelProperties(CartographyRelProperties):
-    lastupdated: PropertyRef = PropertyRef("lastupdated", set_in_kwargs=True)
-
-
-@dataclass(frozen=True)
-# (:CivoLoadBalancer)-[:EXPOSES]->(:CivoKubernetesCluster)
-class CivoLoadBalancerToClusterRel(CartographyRelSchema):
-    """Connects `CivoLoadBalancer` to the `CivoKubernetesCluster` it serves."""
-
-    target_node_label: str = "CivoKubernetesCluster"
-    target_node_matcher: TargetNodeMatcher = make_target_node_matcher(
-        {"id": PropertyRef("cluster_id")},
-    )
-    direction: LinkDirection = LinkDirection.OUTWARD
-    rel_label: str = "EXPOSES"
-    properties: CivoLoadBalancerToClusterRelProperties = (
-        CivoLoadBalancerToClusterRelProperties()
-    )
-
-
-@dataclass(frozen=True)
-class CivoLoadBalancerToNetworkRelProperties(CartographyRelProperties):
-    lastupdated: PropertyRef = PropertyRef("lastupdated", set_in_kwargs=True)
-
-
-@dataclass(frozen=True)
-# (:CivoLoadBalancer)-[:PART_OF_NETWORK]->(:CivoNetwork)
-class CivoLoadBalancerToNetworkRel(CartographyRelSchema):
-    """Connects `CivoLoadBalancer` to the `CivoNetwork` it's on."""
-
-    target_node_label: str = "CivoNetwork"
-    target_node_matcher: TargetNodeMatcher = make_target_node_matcher(
-        {"id": PropertyRef("network_id")},
-    )
-    direction: LinkDirection = LinkDirection.OUTWARD
-    rel_label: str = "PART_OF_NETWORK"
-    properties: CivoLoadBalancerToNetworkRelProperties = (
-        CivoLoadBalancerToNetworkRelProperties()
-    )
-
-
-@dataclass(frozen=True)
 class CivoLoadBalancerSchema(CartographyNodeSchema):
-    """A Civo load balancer."""
+    """A Civo load balancer.
+
+    `firewall_id`/`cluster_id`/`network_id` are kept as plain properties
+    only in this PR - not wired as `PROTECTED_BY`/`EXPOSES`/
+    `PART_OF_NETWORK` relationships, since `CivoFirewall`/
+    `CivoKubernetesCluster`/`CivoNetwork` are owned by the separate
+    Networking/Kubernetes PRs and don't exist on this branch. Those edges
+    are added in a follow-up cross-resource-relationships PR once every
+    Civo resource PR has merged (see
+    .claude-workstreams/civo-pr-split-plan.md) - a relationship must not
+    target a node schema that doesn't exist yet on this PR's own
+    branch."""
 
     label: str = "CivoLoadBalancer"
     properties: CivoLoadBalancerNodeProperties = CivoLoadBalancerNodeProperties()
     extra_node_labels: ExtraNodeLabels = ExtraNodeLabels([LOAD_BALANCER])
     sub_resource_relationship: CivoLoadBalancerToAccountRel = (
         CivoLoadBalancerToAccountRel()
-    )
-    other_relationships: OtherRelationships = OtherRelationships(
-        [
-            CivoLoadBalancerToFirewallRel(),
-            CivoLoadBalancerToClusterRel(),
-            CivoLoadBalancerToNetworkRel(),
-        ],
     )
 
 
@@ -245,40 +186,15 @@ class CivoLoadBalancerBackendToLoadBalancerRel(CartographyRelSchema):
 
 
 @dataclass(frozen=True)
-class CivoLoadBalancerBackendToInstanceRelProperties(CartographyRelProperties):
-    lastupdated: PropertyRef = PropertyRef("lastupdated", set_in_kwargs=True)
-
-
-@dataclass(frozen=True)
-# (:CivoLoadBalancerBackend)-[:ROUTES_TO]->(:CivoInstance)
-class CivoLoadBalancerBackendToInstanceRel(CartographyRelSchema):
-    """Connects `CivoLoadBalancerBackend` to the `CivoInstance` it targets,
-    matched by private IP scoped to the same network and account - private
-    IPs are only unique within a network, and can repeat across different
-    networks or Civo accounts represented in the same graph, so IP alone
-    would risk matching an unrelated instance. A backend whose `ip` is a
-    public IP, or that doesn't match any known instance in the same network,
-    simply won't resolve - matching this codebase's established MatchLink
-    convention elsewhere."""
-
-    target_node_label: str = "CivoInstance"
-    target_node_matcher: TargetNodeMatcher = make_target_node_matcher(
-        {
-            "private_ip": PropertyRef("ip"),
-            "network_id": PropertyRef("network_id"),
-            "account_id": PropertyRef("ACCOUNT_ID", set_in_kwargs=True),
-        },
-    )
-    direction: LinkDirection = LinkDirection.OUTWARD
-    rel_label: str = "ROUTES_TO"
-    properties: CivoLoadBalancerBackendToInstanceRelProperties = (
-        CivoLoadBalancerBackendToInstanceRelProperties()
-    )
-
-
-@dataclass(frozen=True)
 class CivoLoadBalancerBackendSchema(CartographyNodeSchema):
-    """A single backend target (IP:port pair) on a `CivoLoadBalancer`."""
+    """A single backend target (IP:port pair) on a `CivoLoadBalancer`.
+
+    Matched by private IP scoped to the same network and account, `ROUTES_TO`
+    a `CivoInstance` in the reference combined implementation - not wired
+    here, since `CivoInstance` is owned by the separate Compute PR and
+    doesn't exist on this branch. That edge is added in a follow-up
+    cross-resource-relationships PR once every Civo resource PR has merged
+    (see .claude-workstreams/civo-pr-split-plan.md)."""
 
     label: str = "CivoLoadBalancerBackend"
     properties: CivoLoadBalancerBackendNodeProperties = (
@@ -290,7 +206,6 @@ class CivoLoadBalancerBackendSchema(CartographyNodeSchema):
     other_relationships: OtherRelationships = OtherRelationships(
         [
             CivoLoadBalancerBackendToLoadBalancerRel(),
-            CivoLoadBalancerBackendToInstanceRel(),
         ],
     )
 
