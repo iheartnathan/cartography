@@ -11,6 +11,7 @@ import cartography.intel.civo.instances
 import cartography.intel.civo.kubernetes
 import cartography.intel.civo.networks
 import cartography.intel.civo.sshkeys
+import cartography.intel.civo.volumes
 from cartography.config import Config
 from cartography.intel.civo.util import get_regions
 from cartography.util import timeit

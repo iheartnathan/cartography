@@ -307,6 +307,26 @@ modal_mapping = OntologyMapping(
     ],
 )
 
+civo_mapping = OntologyMapping(
+    module_name="civo",
+    nodes=[
+        OntologyNodeMapping(
+            node_label="CivoObjectStoreCredential",
+            fields=[
+                # Unlike AWSAccountAccessKey (mapped to accesskeyid below,
+                # since AWS has no separate display name), Civo object store
+                # credentials carry their own `name` distinct from
+                # `access_key_id` (confirmed live) - map that instead.
+                OntologyFieldMapping(
+                    ontology_field="name", node_field="name", required=True
+                ),
+                # created_at / last_used_at / expires_at: not exposed by
+                # Civo's object store credential API.
+            ],
+        ),
+    ],
+)
+
 APIKEYS_ONTOLOGY_MAPPING: dict[str, OntologyMapping] = {
     "anthropic": anthropic_mapping,
     "github": github_mapping,
@@ -319,6 +339,7 @@ APIKEYS_ONTOLOGY_MAPPING: dict[str, OntologyMapping] = {
     "railway": railway_mapping,
     "supabase": supabase_mapping,
     "modal": modal_mapping,
+    "civo": civo_mapping,
     "snowflake": OntologyMapping(
         module_name="snowflake",
         nodes=[

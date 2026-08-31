@@ -210,6 +210,23 @@ cloudflare_mapping = OntologyMapping(
     ],
 )
 
+civo_mapping = OntologyMapping(
+    module_name="civo",
+    nodes=[
+        OntologyNodeMapping(
+            node_label="CivoObjectStore",
+            fields=[
+                OntologyFieldMapping(
+                    ontology_field="name", node_field="name", required=True
+                ),
+                OntologyFieldMapping(ontology_field="location", node_field="region"),
+                # _ont_encrypted / _ont_versioning / _ont_public: not exposed by
+                # Civo's Object Store API.
+            ],
+        ),
+    ],
+)
+
 OBJECT_STORAGE_ONTOLOGY_MAPPING: dict[str, OntologyMapping] = {
     "aws": aws_mapping,
     "gcp": gcp_mapping,
@@ -218,6 +235,7 @@ OBJECT_STORAGE_ONTOLOGY_MAPPING: dict[str, OntologyMapping] = {
     "databricks": databricks_mapping,
     "supabase": supabase_mapping,
     "cloudflare": cloudflare_mapping,
+    "civo": civo_mapping,
     "snowflake": OntologyMapping(
         module_name="snowflake",
         nodes=[

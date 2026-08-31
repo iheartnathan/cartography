@@ -166,9 +166,30 @@ railway_mapping = OntologyMapping(
     ],
 )
 
+civo_mapping = OntologyMapping(
+    module_name="civo",
+    nodes=[
+        OntologyNodeMapping(
+            node_label="CivoVolume",
+            fields=[
+                OntologyFieldMapping(
+                    ontology_field="name", node_field="name", required=True
+                ),
+                OntologyFieldMapping(ontology_field="size_gb", node_field="size_gb"),
+                OntologyFieldMapping(ontology_field="region", node_field="region"),
+                # _ont_encrypted: Civo's volume API exposes no encryption posture.
+                # _ont_state: Civo's real volume status vocabulary beyond
+                # "available" is undocumented, so left unmapped rather than
+                # guessed - same caution applied to CivoInstance's status.
+            ],
+        ),
+    ],
+)
+
 BLOCK_STORAGE_ONTOLOGY_MAPPING: dict[str, OntologyMapping] = {
     "aws": aws_mapping,
     "azure": azure_mapping,
     "scaleway": scaleway_mapping,
     "railway": railway_mapping,
+    "civo": civo_mapping,
 }
