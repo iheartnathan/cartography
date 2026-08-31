@@ -8,7 +8,9 @@ from urllib3 import Retry
 import cartography.intel.civo.account
 import cartography.intel.civo.firewalls
 import cartography.intel.civo.instances
+import cartography.intel.civo.ips
 import cartography.intel.civo.kubernetes
+import cartography.intel.civo.loadbalancers
 import cartography.intel.civo.networks
 import cartography.intel.civo.objectstores
 import cartography.intel.civo.sshkeys
@@ -114,6 +116,16 @@ def start_civo_ingestion(neo4j_session: neo4j.Session, config: Config) -> None:
         api_session,
         common_job_parameters,
     )
+    cartography.intel.civo.loadbalancers.sync(
+        neo4j_session,
+        api_session,
+        common_job_parameters,
+    )
+    cartography.intel.civo.ips.sync(
+        neo4j_session,
+        api_session,
+        common_job_parameters,
+    )
 
     # Phase 3: cleanup, only after every fetch/transform/load above has
     # succeeded, in the reverse of the load order (most-dependent resources
@@ -130,6 +142,8 @@ def start_civo_ingestion(neo4j_session: neo4j.Session, config: Config) -> None:
     # *previous* run is deleted until every load in *this* run has
     # succeeded, instead of some stale nodes being pruned while others -
     # and the edges severed by that pruning - are left inconsistent.
+    cartography.intel.civo.ips.cleanup(neo4j_session, common_job_parameters)
+    cartography.intel.civo.loadbalancers.cleanup(neo4j_session, common_job_parameters)
     cartography.intel.civo.objectstores.cleanup(neo4j_session, common_job_parameters)
     cartography.intel.civo.volumes.cleanup(neo4j_session, common_job_parameters)
     cartography.intel.civo.kubernetes.cleanup(neo4j_session, common_job_parameters)
